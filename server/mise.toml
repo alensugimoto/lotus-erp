@@ -1,0 +1,5 @@
+[tools]
+postgres = "17"
+
+[env]
+_.file = ".env"
