@@ -27,4 +27,3 @@ gleam_otp = ">= 0.16.1 and < 1.0.0"
 
 [dev-dependencies]
 gleeunit = ">= 1.0.0 and < 2.0.0"
-olive = { path = "/home/alensugimoto/Projects/personal/olive" }
