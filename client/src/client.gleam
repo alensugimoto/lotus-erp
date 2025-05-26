@@ -8,6 +8,7 @@ import lustre/attribute.{type Attribute}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
+import lustre/server_component
 import modem
 
 // MAIN ------------------------------------------------------------------------
@@ -194,6 +195,7 @@ fn view_index() -> List(Element(msg)) {
       html.text("There is not much going on at the moment, but you can still "),
       link(Posts, "read my ramblings ->"),
     ]),
+    server_component.element([server_component.route("/ws")], []),
     paragraph("If you like <3"),
   ]
 }

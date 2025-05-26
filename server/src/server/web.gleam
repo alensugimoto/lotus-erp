@@ -21,6 +21,13 @@ pub fn serve_html(uri: Uri) -> Response(ResponseData) {
           [attribute.type_("module"), attribute.src("/static/client.mjs")],
           "",
         ),
+        html.script(
+          // When serving the client runtime for server components, you must
+          // remember to set the `type` attribute to `"module"` otherwise it won't
+          // work!
+          [attribute.type_("module"), attribute.src("/lustre/runtime.mjs")],
+          "",
+        ),
       ]),
       html.body([], [
         html.div([attribute.id("app")], [client.view_from_uri(uri)]),

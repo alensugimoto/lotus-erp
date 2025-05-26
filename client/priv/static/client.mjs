@@ -44,8 +44,8 @@ var List = class {
     return length3 - 1;
   }
 };
-function prepend(element3, tail) {
-  return new NonEmpty(element3, tail);
+function prepend(element4, tail) {
+  return new NonEmpty(element4, tail);
 }
 function toList(elements, tail) {
   return List.fromArray(elements, tail);
@@ -2036,8 +2036,8 @@ function matches(path, candidates) {
   }
 }
 var separator_event = "\f";
-function event(path, event2) {
-  return do_to_string(path, toList([separator_event, event2]));
+function event(path, event3) {
+  return do_to_string(path, toList([separator_event, event3]));
 }
 
 // build/dev/javascript/lustre/lustre/vdom/vnode.mjs
@@ -3351,12 +3351,12 @@ var Reconciler = class {
           clearTimeout(debouncers.get(name)?.timeout);
           debouncers.delete(name);
         }
-        handlers.set(name, (event2) => {
-          if (prevent) event2.preventDefault();
-          if (stop) event2.stopPropagation();
-          const type = event2.type;
+        handlers.set(name, (event3) => {
+          if (prevent) event3.preventDefault();
+          if (stop) event3.stopPropagation();
+          const type = event3.type;
           let path = "";
-          let pathNode = event2.currentTarget;
+          let pathNode = event3.currentTarget;
           while (pathNode !== this.#root) {
             const key = pathNode[meta].key;
             const parent = pathNode.parentNode;
@@ -3373,24 +3373,24 @@ var Reconciler = class {
             pathNode = parent;
           }
           path = path.slice(1);
-          const data = this.#useServerEvents ? createServerEvent(event2, include ?? []) : event2;
+          const data = this.#useServerEvents ? createServerEvent(event3, include ?? []) : event3;
           const throttle = throttles.get(type);
           if (throttle) {
             const now = Date.now();
             const last = throttle.last || 0;
             if (now > last + throttle.delay) {
               throttle.last = now;
-              throttle.lastEvent = event2;
+              throttle.lastEvent = event3;
               this.#dispatch(data, path, type, immediate2);
             } else {
-              event2.preventDefault();
+              event3.preventDefault();
             }
           }
           const debounce = debouncers.get(type);
           if (debounce) {
             clearTimeout(debounce.timeout);
             debounce.timeout = setTimeout(() => {
-              if (event2 === throttles.get(type)?.lastEvent) return;
+              if (event3 === throttles.get(type)?.lastEvent) return;
               this.#dispatch(data, path, type, immediate2);
             }, debounce.delay);
           } else {
@@ -3449,26 +3449,26 @@ var initialiseMetadata = (parent, node, key = "") => {
   }
 };
 var getKeyedChild = (node, key) => node[meta].keyedChildren.get(key).deref();
-var handleEvent = (event2) => {
-  const target = event2.currentTarget;
-  const handler = target[meta].handlers.get(event2.type);
-  if (event2.type === "submit") {
-    event2.detail ??= {};
-    event2.detail.formData = [...new FormData(event2.target).entries()];
+var handleEvent = (event3) => {
+  const target = event3.currentTarget;
+  const handler = target[meta].handlers.get(event3.type);
+  if (event3.type === "submit") {
+    event3.detail ??= {};
+    event3.detail.formData = [...new FormData(event3.target).entries()];
   }
-  handler(event2);
+  handler(event3);
 };
-var createServerEvent = (event2, include = []) => {
+var createServerEvent = (event3, include = []) => {
   const data = {};
-  if (event2.type === "input" || event2.type === "change") {
+  if (event3.type === "input" || event3.type === "change") {
     include.push("target.value");
   }
-  if (event2.type === "submit") {
+  if (event3.type === "submit") {
     include.push("detail.formData");
   }
   for (const property3 of include) {
     const path = property3.split(".");
-    for (let i = 0, input = event2, output = data; i < path.length; i++) {
+    for (let i = 0, input = event3, output = data; i < path.length; i++) {
       if (i === path.length - 1) {
         output[path[i]] = input[path[i]];
         break;
@@ -3623,8 +3623,8 @@ var Runtime = class {
     this.#model = model;
     this.#view = view3;
     this.#update = update3;
-    this.#reconciler = new Reconciler(this.root, (event2, path, name) => {
-      const [events, msg] = handle(this.#events, path, name, event2);
+    this.#reconciler = new Reconciler(this.root, (event3, path, name) => {
+      const [events, msg] = handle(this.#events, path, name, event3);
       this.#events = events;
       if (msg.isOk()) {
         this.dispatch(msg[0], false);
@@ -3650,10 +3650,10 @@ var Runtime = class {
       this.#tick(effects);
     }
   }
-  emit(event2, data) {
+  emit(event3, data) {
     const target = this.root.host ?? this.root;
     target.dispatchEvent(
-      new CustomEvent(event2, {
+      new CustomEvent(event3, {
         detail: data,
         bubbles: true,
         composed: true
@@ -3675,7 +3675,7 @@ var Runtime = class {
   #shouldFlush = false;
   #actions = {
     dispatch: (msg, immediate2) => this.dispatch(msg, immediate2),
-    emit: (event2, data) => this.emit(event2, data),
+    emit: (event3, data) => this.emit(event3, data),
     select: () => {
     },
     root: () => this.root
@@ -3796,7 +3796,7 @@ function remove_attributes(handlers, path, attributes) {
     }
   );
 }
-function handle(events, path, name, event2) {
+function handle(events, path, name, event3) {
   let next_dispatched_paths = prepend(path, events.next_dispatched_paths);
   let _block;
   let _record = events;
@@ -3812,7 +3812,7 @@ function handle(events, path, name, event2) {
   );
   if ($.isOk()) {
     let handler = $[0];
-    return [events$1, run(event2, handler)];
+    return [events$1, run(event3, handler)];
   } else {
     return [events$1, new Error(toList([]))];
   }
@@ -4167,8 +4167,8 @@ var Spa = class _Spa {
   dispatch(msg, immediate2) {
     this.#runtime.dispatch(msg, immediate2);
   }
-  emit(event2, data) {
-    this.#runtime.emit(event2, data);
+  emit(event3, data) {
+    this.#runtime.emit(event3, data);
   }
 };
 var start = Spa.start;
@@ -4204,6 +4204,14 @@ function start3(app, selector, start_args) {
   );
 }
 
+// build/dev/javascript/lustre/lustre/server_component.mjs
+function element3(attributes, children) {
+  return element2("lustre-server-component", attributes, children);
+}
+function route(path) {
+  return attribute2("route", path);
+}
+
 // build/dev/javascript/modem/modem.ffi.mjs
 var defaults = {
   handle_external_links: false,
@@ -4218,8 +4226,8 @@ var do_initial_uri = () => {
   }
 };
 var do_init = (dispatch, options = defaults) => {
-  document.addEventListener("click", (event2) => {
-    const a2 = find_anchor(event2.target);
+  document.addEventListener("click", (event3) => {
+    const a2 = find_anchor(event3.target);
     if (!a2) return;
     try {
       const url = new URL(a2.href);
@@ -4227,7 +4235,7 @@ var do_init = (dispatch, options = defaults) => {
       const is_external = url.host !== window.location.host;
       if (!options.handle_external_links && is_external) return;
       if (!options.handle_internal_links && !is_external) return;
-      event2.preventDefault();
+      event3.preventDefault();
       if (!is_external) {
         window.history.pushState({}, "", a2.href);
         window.requestAnimationFrame(() => {
@@ -4310,9 +4318,9 @@ function init(handler) {
 
 // build/dev/javascript/client/client.mjs
 var Model = class extends CustomType {
-  constructor(route) {
+  constructor(route2) {
     super();
-    this.route = route;
+    this.route = route2;
   }
 };
 var Post = class extends CustomType {
@@ -4343,9 +4351,9 @@ var NotFound = class extends CustomType {
   }
 };
 var UserNavigatedTo = class extends CustomType {
-  constructor(route) {
+  constructor(route2) {
     super();
-    this.route = route;
+    this.route = route2;
   }
 };
 function parse_route(uri) {
@@ -4371,16 +4379,16 @@ function parse_route(uri) {
     return new NotFound(uri);
   }
 }
-function href2(route) {
+function href2(route2) {
   let _block;
-  if (route instanceof Index2) {
+  if (route2 instanceof Index2) {
     _block = "/";
-  } else if (route instanceof About) {
+  } else if (route2 instanceof About) {
     _block = "/about";
-  } else if (route instanceof Posts) {
+  } else if (route2 instanceof Posts) {
     _block = "/posts";
-  } else if (route instanceof PostById) {
-    let post_id = route.id;
+  } else if (route2 instanceof PostById) {
+    let post_id = route2.id;
     _block = "/post/" + to_string(post_id);
   } else {
     _block = "/404";
@@ -4397,8 +4405,8 @@ function init2(_) {
   } else {
     _block = new Index2();
   }
-  let route = _block;
-  let model = new Model(route);
+  let route2 = _block;
+  let model = new Model(route2);
   let effect = init(
     (uri) => {
       let _pipe = uri;
@@ -4410,8 +4418,8 @@ function init2(_) {
 }
 function update2(_, msg) {
   {
-    let route = msg.route;
-    return [new Model(route), none()];
+    let route2 = msg.route;
+    return [new Model(route2), none()];
   }
 }
 function view_header_link(target, current, text4) {
@@ -4494,6 +4502,10 @@ function view_index() {
         ),
         link(new Posts(), "read my ramblings ->")
       ])
+    ),
+    element3(
+      toList([route("/ws")]),
+      toList([])
     ),
     paragraph("If you like <3")
   ]);
@@ -4629,7 +4641,7 @@ function main2() {
     throw makeError(
       "let_assert",
       "client",
-      17,
+      18,
       "main",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
