@@ -28,12 +28,14 @@ pub fn main() {
       case request.path_segments(request) {
         ["static", "client.mjs"] -> serve_runtime()
         ["lustre", "runtime.mjs"] -> serve_lustre_runtime()
-        ["ws"] -> serve_counter(request)
+        ["autoreload.mjs"] -> serve_autoreload()
+        ["ws"] -> serve_ws(request)
+        ["counter"] -> serve_counter(request)
 
         _ ->
           request
           |> request.to_uri()
-          |> web.serve_html()
+          |> web.serve_html(True)
       }
     }
     |> mist.new()
@@ -79,6 +81,22 @@ fn serve_lustre_runtime() -> Response(ResponseData) {
   }
 }
 
+fn serve_autoreload() -> Response(ResponseData) {
+  let assert Ok(server_priv) = erlang.priv_directory("server")
+  let file_path = server_priv <> "/autoreload.mjs"
+
+  case mist.send_file(file_path, offset: 0, limit: None) {
+    Ok(file) ->
+      response.new(200)
+      |> response.prepend_header("content-type", "application/javascript")
+      |> response.set_body(file)
+
+    Error(_) ->
+      response.new(404)
+      |> response.set_body(mist.Bytes(bytes_tree.new()))
+  }
+}
+
 fn serve_runtime() -> Response(ResponseData) {
   let assert Ok(client_priv) = erlang.priv_directory("client")
   let file_path = client_priv <> "/static/client.mjs"
@@ -96,6 +114,15 @@ fn serve_runtime() -> Response(ResponseData) {
 }
 
 // WEBSOCKET -------------------------------------------------------------------
+
+fn serve_ws(request: Request(Connection)) -> Response(ResponseData) {
+  mist.websocket(
+    request:,
+    on_init: fn(_conn) { #(Nil, None) },
+    handler: fn(_state, _conn, _msg) { actor.Stop(process.Normal) },
+    on_close: fn(_state) { Nil },
+  )
+}
 
 fn serve_counter(request: Request(Connection)) -> Response(ResponseData) {
   mist.websocket(

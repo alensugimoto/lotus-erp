@@ -4504,7 +4504,7 @@ function view_index() {
       ])
     ),
     element3(
-      toList([route("/ws")]),
+      toList([route("/counter")]),
       toList([])
     ),
     paragraph("If you like <3")

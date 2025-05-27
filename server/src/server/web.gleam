@@ -7,7 +7,7 @@ import lustre/element
 import lustre/element/html
 import mist.{type ResponseData}
 
-pub fn serve_html(uri: Uri) -> Response(ResponseData) {
+pub fn serve_html(uri: Uri, dev_mode: Bool) -> Response(ResponseData) {
   let html =
     html.html([attribute.lang("en")], [
       html.head([], [
@@ -28,6 +28,14 @@ pub fn serve_html(uri: Uri) -> Response(ResponseData) {
           [attribute.type_("module"), attribute.src("/lustre/runtime.mjs")],
           "",
         ),
+        case dev_mode {
+          True ->
+            html.script(
+              [attribute.type_("module"), attribute.src("/autoreload.mjs")],
+              "",
+            )
+          False -> element.none()
+        },
       ]),
       html.body([], [
         html.div([attribute.id("app")], [client.view_from_uri(uri)]),
