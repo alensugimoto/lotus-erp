@@ -195,7 +195,8 @@ fn view_index() -> List(Element(msg)) {
       html.text("There is not much going on at the moment, but you can still "),
       link(Posts, "read my ramblings ->"),
     ]),
-    server_component.element([server_component.route("/counter")], []),
+    // TODO: get routes from server
+    server_component.element([server_component.route("/ws/counter")], []),
     paragraph("If you like <3"),
   ]
 }

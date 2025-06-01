@@ -1,43 +1,96 @@
-// import envoy
+import client
 import counter
+import envoy
 import gleam/bytes_tree
+import gleam/dict
 import gleam/erlang
-import gleam/erlang/process.{type Selector, type Subject}
+import gleam/erlang/process.{type Subject}
 import gleam/function
+import gleam/http.{Get}
 import gleam/http/request.{type Request}
-import gleam/http/response.{type Response}
+import gleam/http/response.{type Response, Response}
 import gleam/json
-import gleam/option.{type Option, None, Some}
+import gleam/list
+import gleam/option.{None, Some}
 import gleam/otp/actor
+import gleam/pair
+import gleam/result
+import gleam/string
+import gleam/uri.{type Uri}
 import logging
 import lustre
+import lustre/attribute
+import lustre/element
+import lustre/element/html
 import lustre/server_component
-import mist.{type Connection, type ResponseData}
+import mist.{type Connection as HttpConnection, type ResponseData, Websocket}
+import pog.{type Connection as DbConnectionPool}
 
-// import pog
-import server/web
+fn start_database_pool() -> pog.Connection {
+  // TODO: maybe don't parse url but split it beforehand
+  let assert Ok(url) = envoy.get("DATABASE_URL")
+  let assert Ok(config) = pog.url_config(url)
+
+  config
+  |> pog.pool_size(15)
+  |> pog.connect()
+}
+
+type Context {
+  Context(db: DbConnectionPool, resources: dict.Dict(List(String), Resource))
+}
+
+type Resource {
+  Dev
+  Asset(priv: String, src: String)
+  CounterComponent
+}
+
+fn get_resources() -> dict.Dict(List(String), Resource) {
+  let assets =
+    [
+      // NOTE: dev mode
+      #("autoreload", "server"),
+      #("client", "client"),
+      #("lustre-server-component.min", "lustre"),
+    ]
+    |> list.map(
+      pair.map_first(_, fn(file_name) { ["static", file_name <> ".mjs"] }),
+    )
+    |> list.map(fn(asset) {
+      pair.map_second(asset, fn(pkg_name) {
+        let assert Ok(priv) = erlang.priv_directory(pkg_name)
+        let src =
+          ["", ..pair.first(asset)]
+          |> string.join(with: "/")
+        Asset(priv:, src:)
+      })
+    })
+
+  let websockets =
+    [#([], Dev), #(["counter"], CounterComponent)]
+    |> list.map(pair.map_first(_, fn(path_segs) { ["ws", ..path_segs] }))
+
+  let resources = list.append(assets, websockets)
+  let dict_resources = dict.from_list(resources)
+
+  let assert True =
+    list.length(dict.keys(dict_resources)) == list.length(resources)
+
+  dict_resources
+}
 
 pub fn main() {
   logging.configure()
 
-  // let _db = start_database_pool()
+  let ctx = {
+    let db = start_database_pool()
+    let resources = get_resources()
+    Context(db:, resources:)
+  }
 
   let assert Ok(_) =
-    fn(request: Request(Connection)) -> Response(ResponseData) {
-      // TODO: remove trailing slashes and redirect 301
-      case request.path_segments(request) {
-        ["static", "client.mjs"] -> serve_runtime()
-        ["lustre", "runtime.mjs"] -> serve_lustre_runtime()
-        ["autoreload.mjs"] -> serve_autoreload()
-        ["ws"] -> serve_ws(request)
-        ["counter"] -> serve_counter(request)
-
-        _ ->
-          request
-          |> request.to_uri()
-          |> web.serve_html(True)
-      }
-    }
+    handle_request(_, ctx)
     |> mist.new()
     |> mist.port(3000)
     |> mist.start_http()
@@ -45,148 +98,133 @@ pub fn main() {
   process.sleep_forever()
 }
 
-// fn start_database_pool() -> pog.Connection {
-//   let assert Ok(url) = envoy.get("DATABASE_URL")
-//   let assert Ok(config) = pog.url_config(url)
-//
-//   config
-//   |> pog.pool_size(15)
-//   |> pog.connect()
-// }
-
-// HTML ------------------------------------------------------------------------
-
-// JAVASCRIPT ------------------------------------------------------------------
-
-fn serve_lustre_runtime() -> Response(ResponseData) {
-  // Whenever you want to use server components, it's important that you serve
-  // the client runtime to the browser. This small JavaScript module registers
-  // the `<lustre-server-component />` custom element that you'll use in your HTML
-  // to create server components.
-  //
-  // Lustre includes both a standard and a minified version of the runtime. The
-  // minified bundle clocks in at just 10kB before compression!
-  let assert Ok(lustre_priv) = erlang.priv_directory("lustre")
-  let file_path = lustre_priv <> "/static/lustre-server-component.min.mjs"
-
-  case mist.send_file(file_path, offset: 0, limit: None) {
-    Ok(file) ->
-      response.new(200)
-      |> response.prepend_header("content-type", "application/javascript")
-      |> response.set_body(file)
-
-    Error(_) ->
-      response.new(404)
+fn handle_request(
+  req: Request(HttpConnection),
+  ctx: Context,
+) -> Response(ResponseData) {
+  // TODO: remove trailing slashes and redirect 301
+  case req.method {
+    Get -> handle_get_request(req, ctx)
+    _ ->
+      response.new(405)
       |> response.set_body(mist.Bytes(bytes_tree.new()))
   }
 }
 
-fn serve_autoreload() -> Response(ResponseData) {
-  let assert Ok(server_priv) = erlang.priv_directory("server")
-  let file_path = server_priv <> "/autoreload.mjs"
+fn handle_get_request(
+  req: Request(HttpConnection),
+  ctx: Context,
+) -> Response(ResponseData) {
+  ctx.resources
+  |> dict.get(request.path_segments(req))
+  |> result.then(fn(resource) {
+    case resource {
+      Asset(priv:, src:) -> serve_js_file(priv:, src:)
+      Dev ->
+        // NOTE: dev mode
+        start_websocket(
+          req:,
+          handler: fn(_state, _conn, _msg) { actor.Stop(process.Normal) },
+          on_init: fn(_conn) { #(Nil, None) },
+          on_close: fn(_state) { Nil },
+        )
+      CounterComponent ->
+        start_component(req:, app: counter.component, with: Nil)
+    }
+  })
+  |> result.unwrap(
+    req
+    |> request.to_uri()
+    |> serve_html(ctx),
+  )
+}
 
-  case mist.send_file(file_path, offset: 0, limit: None) {
-    Ok(file) ->
-      response.new(200)
-      |> response.prepend_header("content-type", "application/javascript")
-      |> response.set_body(file)
+fn serve_js_file(
+  priv priv: String,
+  src src: String,
+) -> Result(Response(ResponseData), Nil) {
+  priv
+  |> string.append(src)
+  |> mist.send_file(offset: 0, limit: None)
+  |> result.map_error(fn(_) { Nil })
+  |> result.map(fn(file) {
+    response.new(200)
+    |> response.prepend_header("content-type", "application/javascript")
+    |> response.set_body(file)
+  })
+}
 
-    Error(_) ->
-      response.new(404)
-      |> response.set_body(mist.Bytes(bytes_tree.new()))
+fn start_websocket(
+  req request,
+  handler handler,
+  on_init on_init,
+  on_close on_close,
+) -> Result(Response(ResponseData), Nil) {
+  mist.websocket(request:, handler:, on_init:, on_close:)
+  |> require_websocket_response()
+}
+
+fn start_component(
+  req req: Request(HttpConnection),
+  app app: fn() -> lustre.App(start_args, model, msg),
+  with start_args: start_args,
+) -> Result(Response(ResponseData), Nil) {
+  start_websocket(
+    req:,
+    handler: loop_component_socket,
+    on_init: init_component_socket(_, app, start_args),
+    on_close: close_component_socket,
+  )
+}
+
+fn require_websocket_response(
+  resp: Response(ResponseData),
+) -> Result(Response(ResponseData), Nil) {
+  case resp {
+    Response(body: Websocket(_), ..) -> Ok(resp)
+    Response(..) -> Error(Nil)
   }
 }
 
-fn serve_runtime() -> Response(ResponseData) {
-  let assert Ok(client_priv) = erlang.priv_directory("client")
-  let file_path = client_priv <> "/static/client.mjs"
-
-  case mist.send_file(file_path, offset: 0, limit: None) {
-    Ok(file) ->
-      response.new(200)
-      |> response.prepend_header("content-type", "application/javascript")
-      |> response.set_body(file)
-
-    Error(_) ->
-      response.new(404)
-      |> response.set_body(mist.Bytes(bytes_tree.new()))
-  }
-}
-
-// WEBSOCKET -------------------------------------------------------------------
-
-fn serve_ws(request: Request(Connection)) -> Response(ResponseData) {
-  mist.websocket(
-    request:,
-    on_init: fn(_conn) { #(Nil, None) },
-    handler: fn(_state, _conn, _msg) { actor.Stop(process.Normal) },
-    on_close: fn(_state) { Nil },
+type ComponentSocket(msg) {
+  ComponentSocket(
+    component: lustre.Runtime(msg),
+    self: Subject(server_component.ClientMessage(msg)),
   )
 }
 
-fn serve_counter(request: Request(Connection)) -> Response(ResponseData) {
-  mist.websocket(
-    request:,
-    on_init: init_counter_socket,
-    handler: loop_counter_socket,
-    on_close: close_counter_socket,
-  )
-}
+type ComponentSocketMessage(msg) =
+  server_component.ClientMessage(msg)
 
-type CounterSocket {
-  CounterSocket(
-    component: lustre.Runtime(counter.Msg),
-    self: Subject(server_component.ClientMessage(counter.Msg)),
-  )
-}
+fn init_component_socket(
+  _connection: mist.WebsocketConnection,
+  app: fn() -> lustre.App(start_args, model, msg),
+  start_args: start_args,
+) {
+  let assert Ok(component) =
+    app()
+    |> lustre.start_server_component(start_args)
 
-type CounterSocketMessage =
-  server_component.ClientMessage(counter.Msg)
-
-type CounterSocketInit =
-  #(CounterSocket, Option(Selector(CounterSocketMessage)))
-
-fn init_counter_socket(_) -> CounterSocketInit {
-  let counter = counter.component()
-  // Rather than calling `lustre.start` as we do in the client, we construct the
-  // Lustre runtime by calling `lustre.start_server_component`. This is the same
-  // `Runtime` type we get from `lustre.start` but this function doesn't need a
-  // CSS selector for the element to attach to: there's no DOM here!
-  let assert Ok(component) = lustre.start_server_component(counter, Nil)
-
-  // The server component runtime communicates to the websocket process using
-  // Gleam's standard process messaging. We construct a new subject that the
-  // runtime can send messages to, and then we initialise a selector so that we
-  // can handle those messages in `loop_counter_socket`.
   let self = process.new_subject()
   let selector =
     process.new_selector()
     |> process.selecting(self, function.identity)
 
-  // Calling `register_subject` is how the runtime knows to send messages to
-  // this process when it wants to communicate with the client. In Lustre, server
-  // components are not opinionated about the transport layer or your network
-  // setup: instead the runtime broadcasts messages to any registered subjects
-  // and lets you handle the transport layer yourself.
   server_component.register_subject(self)
   |> lustre.send(to: component)
 
-  #(CounterSocket(component:, self:), Some(selector))
+  #(ComponentSocket(component:, self:), Some(selector))
 }
 
-fn loop_counter_socket(
-  state: CounterSocket,
+fn loop_component_socket(
+  state: ComponentSocket(msg),
   connection: mist.WebsocketConnection,
-  message: mist.WebsocketMessage(CounterSocketMessage),
+  message: mist.WebsocketMessage(ComponentSocketMessage(msg)),
 ) {
   case message {
-    // The client runtime will send us JSON-encoded text frames that we need to
-    // decode and pass to the server component runtime.
     mist.Text(json) -> {
       case json.parse(json, server_component.runtime_message_decoder()) {
         Ok(runtime_message) -> lustre.send(state.component, runtime_message)
-        // This case will only be hit if something other than Lustre's client
-        // runtime sends us a message.
         Error(_) -> Nil
       }
 
@@ -197,30 +235,53 @@ fn loop_counter_socket(
       actor.continue(state)
     }
 
-    // We hit this case when the server component runtime sends us a message that
-    // we need to forward to the client. Because Lustre does not control your
-    // network connection, it's our app's responsibility to make sure these messages
-    // are encoded and sent to the client.
     mist.Custom(client_message) -> {
       let json = server_component.client_message_to_json(client_message)
-      let assert Ok(_) = mist.send_text_frame(connection, json.to_string(json))
+      let assert Ok(Nil) =
+        mist.send_text_frame(connection, json.to_string(json))
 
       actor.continue(state)
     }
 
-    mist.Closed | mist.Shutdown -> {
-      // The server component runtime sets up a process monitor that can clean
-      // up if our socket process dies or is killed, but it's good practice to
-      // clean up ourselves if we get the opportunity.
-      server_component.deregister_subject(state.self)
-      |> lustre.send(to: state.component)
-
-      actor.Stop(process.Normal)
-    }
+    mist.Closed | mist.Shutdown -> actor.Stop(process.Normal)
   }
 }
 
-fn close_counter_socket(state: CounterSocket) -> Nil {
+fn close_component_socket(state: ComponentSocket(msg)) -> Nil {
   server_component.deregister_subject(state.self)
   |> lustre.send(to: state.component)
+}
+
+fn serve_html(uri: Uri, ctx: Context) -> Response(ResponseData) {
+  let html =
+    html.html([attribute.lang("en")], [
+      html.head([], [
+        html.meta([attribute.charset("utf-8")]),
+        html.meta([
+          attribute.name("viewport"),
+          attribute.content("width=device-width, initial-scale=1"),
+        ]),
+        html.title([], "hello"),
+        element.fragment(
+          ctx.resources
+          |> dict.values()
+          |> list.map(fn(resource) {
+            case resource {
+              Asset(src:, ..) ->
+                html.script([attribute.type_("module"), attribute.src(src)], "")
+              _ -> element.none()
+            }
+          }),
+        ),
+      ]),
+      html.body([], [
+        html.div([attribute.id("app")], [client.view_from_uri(uri)]),
+      ]),
+    ])
+    |> element.to_document_string_tree()
+    |> bytes_tree.from_string_tree()
+
+  response.new(200)
+  |> response.set_body(mist.Bytes(html))
+  |> response.set_header("content-type", "text/html")
 }

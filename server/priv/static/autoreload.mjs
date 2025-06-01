@@ -14,6 +14,7 @@ function connect() {
 
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
   liveReloadWebSocket = new WebSocket(
+    // TODO: get routes from server
     `${protocol}://${window.location.host}/ws`,
   );
 
