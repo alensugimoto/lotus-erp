@@ -129,7 +129,7 @@ fn handle_get_request(
           on_close: fn(_state) { Nil },
         )
       CounterComponent ->
-        start_component(req:, app: counter.component, with: Nil)
+        start_component(req:, app: counter.component, with: ctx.db)
     }
   })
   |> result.unwrap(
