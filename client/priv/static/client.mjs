@@ -257,6 +257,11 @@ function bitArrayByteAt(buffer, bitOffset, index4) {
     return a2 | b;
   }
 }
+var UtfCodepoint = class {
+  constructor(value2) {
+    this.value = value2;
+  }
+};
 var isBitArrayDeprecationMessagePrinted = {};
 function bitArrayPrintDeprecationWarning(name2, message2) {
   if (isBitArrayDeprecationMessagePrinted[name2]) {
@@ -266,6 +271,277 @@ function bitArrayPrintDeprecationWarning(name2, message2) {
     `Deprecated BitArray.${name2} property used in JavaScript FFI code. ${message2}.`
   );
   isBitArrayDeprecationMessagePrinted[name2] = true;
+}
+function bitArraySlice(bitArray, start4, end) {
+  end ??= bitArray.bitSize;
+  bitArrayValidateRange(bitArray, start4, end);
+  if (start4 === end) {
+    return new BitArray(new Uint8Array());
+  }
+  if (start4 === 0 && end === bitArray.bitSize) {
+    return bitArray;
+  }
+  start4 += bitArray.bitOffset;
+  end += bitArray.bitOffset;
+  const startByteIndex = Math.trunc(start4 / 8);
+  const endByteIndex = Math.trunc((end + 7) / 8);
+  const byteLength = endByteIndex - startByteIndex;
+  let buffer;
+  if (startByteIndex === 0 && byteLength === bitArray.rawBuffer.byteLength) {
+    buffer = bitArray.rawBuffer;
+  } else {
+    buffer = new Uint8Array(
+      bitArray.rawBuffer.buffer,
+      bitArray.rawBuffer.byteOffset + startByteIndex,
+      byteLength
+    );
+  }
+  return new BitArray(buffer, end - start4, start4 % 8);
+}
+function bitArraySliceToInt(bitArray, start4, end, isBigEndian, isSigned) {
+  bitArrayValidateRange(bitArray, start4, end);
+  if (start4 === end) {
+    return 0;
+  }
+  start4 += bitArray.bitOffset;
+  end += bitArray.bitOffset;
+  const isStartByteAligned = start4 % 8 === 0;
+  const isEndByteAligned = end % 8 === 0;
+  if (isStartByteAligned && isEndByteAligned) {
+    return intFromAlignedSlice(
+      bitArray,
+      start4 / 8,
+      end / 8,
+      isBigEndian,
+      isSigned
+    );
+  }
+  const size2 = end - start4;
+  const startByteIndex = Math.trunc(start4 / 8);
+  const endByteIndex = Math.trunc((end - 1) / 8);
+  if (startByteIndex == endByteIndex) {
+    const mask2 = 255 >> start4 % 8;
+    const unusedLowBitCount = (8 - end % 8) % 8;
+    let value2 = (bitArray.rawBuffer[startByteIndex] & mask2) >> unusedLowBitCount;
+    if (isSigned) {
+      const highBit = 2 ** (size2 - 1);
+      if (value2 >= highBit) {
+        value2 -= highBit * 2;
+      }
+    }
+    return value2;
+  }
+  if (size2 <= 53) {
+    return intFromUnalignedSliceUsingNumber(
+      bitArray.rawBuffer,
+      start4,
+      end,
+      isBigEndian,
+      isSigned
+    );
+  } else {
+    return intFromUnalignedSliceUsingBigInt(
+      bitArray.rawBuffer,
+      start4,
+      end,
+      isBigEndian,
+      isSigned
+    );
+  }
+}
+function intFromAlignedSlice(bitArray, start4, end, isBigEndian, isSigned) {
+  const byteSize = end - start4;
+  if (byteSize <= 6) {
+    return intFromAlignedSliceUsingNumber(
+      bitArray.rawBuffer,
+      start4,
+      end,
+      isBigEndian,
+      isSigned
+    );
+  } else {
+    return intFromAlignedSliceUsingBigInt(
+      bitArray.rawBuffer,
+      start4,
+      end,
+      isBigEndian,
+      isSigned
+    );
+  }
+}
+function intFromAlignedSliceUsingNumber(buffer, start4, end, isBigEndian, isSigned) {
+  const byteSize = end - start4;
+  let value2 = 0;
+  if (isBigEndian) {
+    for (let i = start4; i < end; i++) {
+      value2 *= 256;
+      value2 += buffer[i];
+    }
+  } else {
+    for (let i = end - 1; i >= start4; i--) {
+      value2 *= 256;
+      value2 += buffer[i];
+    }
+  }
+  if (isSigned) {
+    const highBit = 2 ** (byteSize * 8 - 1);
+    if (value2 >= highBit) {
+      value2 -= highBit * 2;
+    }
+  }
+  return value2;
+}
+function intFromAlignedSliceUsingBigInt(buffer, start4, end, isBigEndian, isSigned) {
+  const byteSize = end - start4;
+  let value2 = 0n;
+  if (isBigEndian) {
+    for (let i = start4; i < end; i++) {
+      value2 *= 256n;
+      value2 += BigInt(buffer[i]);
+    }
+  } else {
+    for (let i = end - 1; i >= start4; i--) {
+      value2 *= 256n;
+      value2 += BigInt(buffer[i]);
+    }
+  }
+  if (isSigned) {
+    const highBit = 1n << BigInt(byteSize * 8 - 1);
+    if (value2 >= highBit) {
+      value2 -= highBit * 2n;
+    }
+  }
+  return Number(value2);
+}
+function intFromUnalignedSliceUsingNumber(buffer, start4, end, isBigEndian, isSigned) {
+  const isStartByteAligned = start4 % 8 === 0;
+  let size2 = end - start4;
+  let byteIndex = Math.trunc(start4 / 8);
+  let value2 = 0;
+  if (isBigEndian) {
+    if (!isStartByteAligned) {
+      const leadingBitsCount = 8 - start4 % 8;
+      value2 = buffer[byteIndex++] & (1 << leadingBitsCount) - 1;
+      size2 -= leadingBitsCount;
+    }
+    while (size2 >= 8) {
+      value2 *= 256;
+      value2 += buffer[byteIndex++];
+      size2 -= 8;
+    }
+    if (size2 > 0) {
+      value2 *= 2 ** size2;
+      value2 += buffer[byteIndex] >> 8 - size2;
+    }
+  } else {
+    if (isStartByteAligned) {
+      let size3 = end - start4;
+      let scale = 1;
+      while (size3 >= 8) {
+        value2 += buffer[byteIndex++] * scale;
+        scale *= 256;
+        size3 -= 8;
+      }
+      value2 += (buffer[byteIndex] >> 8 - size3) * scale;
+    } else {
+      const highBitsCount = start4 % 8;
+      const lowBitsCount = 8 - highBitsCount;
+      let size3 = end - start4;
+      let scale = 1;
+      while (size3 >= 8) {
+        const byte = buffer[byteIndex] << highBitsCount | buffer[byteIndex + 1] >> lowBitsCount;
+        value2 += (byte & 255) * scale;
+        scale *= 256;
+        size3 -= 8;
+        byteIndex++;
+      }
+      if (size3 > 0) {
+        const lowBitsUsed = size3 - Math.max(0, size3 - lowBitsCount);
+        let trailingByte = (buffer[byteIndex] & (1 << lowBitsCount) - 1) >> lowBitsCount - lowBitsUsed;
+        size3 -= lowBitsUsed;
+        if (size3 > 0) {
+          trailingByte *= 2 ** size3;
+          trailingByte += buffer[byteIndex + 1] >> 8 - size3;
+        }
+        value2 += trailingByte * scale;
+      }
+    }
+  }
+  if (isSigned) {
+    const highBit = 2 ** (end - start4 - 1);
+    if (value2 >= highBit) {
+      value2 -= highBit * 2;
+    }
+  }
+  return value2;
+}
+function intFromUnalignedSliceUsingBigInt(buffer, start4, end, isBigEndian, isSigned) {
+  const isStartByteAligned = start4 % 8 === 0;
+  let size2 = end - start4;
+  let byteIndex = Math.trunc(start4 / 8);
+  let value2 = 0n;
+  if (isBigEndian) {
+    if (!isStartByteAligned) {
+      const leadingBitsCount = 8 - start4 % 8;
+      value2 = BigInt(buffer[byteIndex++] & (1 << leadingBitsCount) - 1);
+      size2 -= leadingBitsCount;
+    }
+    while (size2 >= 8) {
+      value2 *= 256n;
+      value2 += BigInt(buffer[byteIndex++]);
+      size2 -= 8;
+    }
+    if (size2 > 0) {
+      value2 <<= BigInt(size2);
+      value2 += BigInt(buffer[byteIndex] >> 8 - size2);
+    }
+  } else {
+    if (isStartByteAligned) {
+      let size3 = end - start4;
+      let shift = 0n;
+      while (size3 >= 8) {
+        value2 += BigInt(buffer[byteIndex++]) << shift;
+        shift += 8n;
+        size3 -= 8;
+      }
+      value2 += BigInt(buffer[byteIndex] >> 8 - size3) << shift;
+    } else {
+      const highBitsCount = start4 % 8;
+      const lowBitsCount = 8 - highBitsCount;
+      let size3 = end - start4;
+      let shift = 0n;
+      while (size3 >= 8) {
+        const byte = buffer[byteIndex] << highBitsCount | buffer[byteIndex + 1] >> lowBitsCount;
+        value2 += BigInt(byte & 255) << shift;
+        shift += 8n;
+        size3 -= 8;
+        byteIndex++;
+      }
+      if (size3 > 0) {
+        const lowBitsUsed = size3 - Math.max(0, size3 - lowBitsCount);
+        let trailingByte = (buffer[byteIndex] & (1 << lowBitsCount) - 1) >> lowBitsCount - lowBitsUsed;
+        size3 -= lowBitsUsed;
+        if (size3 > 0) {
+          trailingByte <<= size3;
+          trailingByte += buffer[byteIndex + 1] >> 8 - size3;
+        }
+        value2 += BigInt(trailingByte) << shift;
+      }
+    }
+  }
+  if (isSigned) {
+    const highBit = 2n ** BigInt(end - start4 - 1);
+    if (value2 >= highBit) {
+      value2 -= highBit * 2n;
+    }
+  }
+  return Number(value2);
+}
+function bitArrayValidateRange(bitArray, start4, end) {
+  if (start4 < 0 || start4 > bitArray.bitSize || end < start4 || end > bitArray.bitSize) {
+    const msg = `Invalid bit array slice: start = ${start4}, end = ${end}, bit size = ${bitArray.bitSize}`;
+    throw new globalThis.Error(msg);
+  }
 }
 var Result = class _Result extends CustomType {
   // @internal
@@ -4657,9 +4933,9 @@ var make_component = ({ init: init4, update: update4, view: view4, config }, nam
 
 // build/dev/javascript/lustre/lustre/component.mjs
 var Config2 = class extends CustomType {
-  constructor(open_shadow_root, adopt_styles, attributes, properties, is_form_associated, on_form_autofill, on_form_reset, on_form_restore) {
+  constructor(open_shadow_root2, adopt_styles, attributes, properties, is_form_associated, on_form_autofill, on_form_reset, on_form_restore) {
     super();
-    this.open_shadow_root = open_shadow_root;
+    this.open_shadow_root = open_shadow_root2;
     this.adopt_styles = adopt_styles;
     this.attributes = attributes;
     this.properties = properties;
@@ -4667,6 +4943,12 @@ var Config2 = class extends CustomType {
     this.on_form_autofill = on_form_autofill;
     this.on_form_reset = on_form_reset;
     this.on_form_restore = on_form_restore;
+  }
+};
+var Option = class extends CustomType {
+  constructor(apply) {
+    super();
+    this.apply = apply;
   }
 };
 function new$6(options) {
@@ -4685,6 +4967,23 @@ function new$6(options) {
     init4,
     (config, option) => {
       return option.apply(config);
+    }
+  );
+}
+function open_shadow_root(open) {
+  return new Option(
+    (config) => {
+      let _record = config;
+      return new Config2(
+        open,
+        _record.adopt_styles,
+        _record.attributes,
+        _record.properties,
+        _record.is_form_associated,
+        _record.on_form_autofill,
+        _record.on_form_reset,
+        _record.on_form_restore
+      );
     }
   );
 }
@@ -5009,7 +5308,7 @@ function init2(_) {
           _pipe$1,
           "customer_id",
           new SingleField(
-            "number",
+            "text",
             true,
             "",
             (() => {
@@ -5029,7 +5328,7 @@ function init2(_) {
     none()
   ];
 }
-var component_name = "formy";
+var component_name = "my-form";
 function element4(attributes) {
   return element2(component_name, attributes, toList([]));
 }
@@ -5110,6 +5409,7 @@ function update2(model, msg) {
   } else {
     let name2 = msg[0];
     let value2 = msg[1];
+    echo([name2, value2], "src/client/formy.gleam", 124);
     let _pipe = model.fields;
     let _pipe$1 = map_get(_pipe, name2);
     let _pipe$2 = map3(
@@ -5141,8 +5441,149 @@ function update2(model, msg) {
   }
 }
 function register() {
-  let component2 = component(init2, update2, view2, toList([]));
+  let component2 = component(
+    init2,
+    update2,
+    view2,
+    toList([open_shadow_root(true)])
+  );
   return make_component(component2, component_name);
+}
+function echo(value2, file, line) {
+  const grey = "\x1B[90m";
+  const reset_color = "\x1B[39m";
+  const file_line = `${file}:${line}`;
+  const string_value = echo$inspect(value2);
+  if (globalThis.process?.stderr?.write) {
+    const string5 = `${grey}${file_line}${reset_color}
+${string_value}
+`;
+    process.stderr.write(string5);
+  } else if (globalThis.Deno) {
+    const string5 = `${grey}${file_line}${reset_color}
+${string_value}
+`;
+    globalThis.Deno.stderr.writeSync(new TextEncoder().encode(string5));
+  } else {
+    const string5 = `${file_line}
+${string_value}`;
+    globalThis.console.log(string5);
+  }
+  return value2;
+}
+function echo$inspectString(str) {
+  let new_str = '"';
+  for (let i = 0; i < str.length; i++) {
+    let char = str[i];
+    if (char == "\n") new_str += "\\n";
+    else if (char == "\r") new_str += "\\r";
+    else if (char == "	") new_str += "\\t";
+    else if (char == "\f") new_str += "\\f";
+    else if (char == "\\") new_str += "\\\\";
+    else if (char == '"') new_str += '\\"';
+    else if (char < " " || char > "~" && char < "\xA0") {
+      new_str += "\\u{" + char.charCodeAt(0).toString(16).toUpperCase().padStart(4, "0") + "}";
+    } else {
+      new_str += char;
+    }
+  }
+  new_str += '"';
+  return new_str;
+}
+function echo$inspectDict(map4) {
+  let body = "dict.from_list([";
+  let first = true;
+  let key_value_pairs = [];
+  map4.forEach((value2, key) => {
+    key_value_pairs.push([key, value2]);
+  });
+  key_value_pairs.sort();
+  key_value_pairs.forEach(([key, value2]) => {
+    if (!first) body = body + ", ";
+    body = body + "#(" + echo$inspect(key) + ", " + echo$inspect(value2) + ")";
+    first = false;
+  });
+  return body + "])";
+}
+function echo$inspectCustomType(record) {
+  const props = globalThis.Object.keys(record).map((label2) => {
+    const value2 = echo$inspect(record[label2]);
+    return isNaN(parseInt(label2)) ? `${label2}: ${value2}` : value2;
+  }).join(", ");
+  return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+}
+function echo$inspectObject(v) {
+  const name2 = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+  const props = [];
+  for (const k of Object.keys(v)) {
+    props.push(`${echo$inspect(k)}: ${echo$inspect(v[k])}`);
+  }
+  const body = props.length ? " " + props.join(", ") + " " : "";
+  const head = name2 === "Object" ? "" : name2 + " ";
+  return `//js(${head}{${body}})`;
+}
+function echo$inspect(v) {
+  const t = typeof v;
+  if (v === true) return "True";
+  if (v === false) return "False";
+  if (v === null) return "//js(null)";
+  if (v === void 0) return "Nil";
+  if (t === "string") return echo$inspectString(v);
+  if (t === "bigint" || t === "number") return v.toString();
+  if (globalThis.Array.isArray(v))
+    return `#(${v.map(echo$inspect).join(", ")})`;
+  if (v instanceof List)
+    return `[${v.toArray().map(echo$inspect).join(", ")}]`;
+  if (v instanceof UtfCodepoint)
+    return `//utfcodepoint(${String.fromCodePoint(v.value)})`;
+  if (v instanceof BitArray) return echo$inspectBitArray(v);
+  if (v instanceof CustomType) return echo$inspectCustomType(v);
+  if (echo$isDict(v)) return echo$inspectDict(v);
+  if (v instanceof Set)
+    return `//js(Set(${[...v].map(echo$inspect).join(", ")}))`;
+  if (v instanceof RegExp) return `//js(${v})`;
+  if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
+  if (v instanceof Function) {
+    const args = [];
+    for (const i of Array(v.length).keys())
+      args.push(String.fromCharCode(i + 97));
+    return `//fn(${args.join(", ")}) { ... }`;
+  }
+  return echo$inspectObject(v);
+}
+function echo$inspectBitArray(bitArray) {
+  let endOfAlignedBytes = bitArray.bitOffset + 8 * Math.trunc(bitArray.bitSize / 8);
+  let alignedBytes = bitArraySlice(
+    bitArray,
+    bitArray.bitOffset,
+    endOfAlignedBytes
+  );
+  let remainingUnalignedBits = bitArray.bitSize % 8;
+  if (remainingUnalignedBits > 0) {
+    let remainingBits = bitArraySliceToInt(
+      bitArray,
+      endOfAlignedBytes,
+      bitArray.bitSize,
+      false,
+      false
+    );
+    let alignedBytesArray = Array.from(alignedBytes.rawBuffer);
+    let suffix = `${remainingBits}:size(${remainingUnalignedBits})`;
+    if (alignedBytesArray.length === 0) {
+      return `<<${suffix}>>`;
+    } else {
+      return `<<${Array.from(alignedBytes.rawBuffer).join(", ")}, ${suffix}>>`;
+    }
+  } else {
+    return `<<${Array.from(alignedBytes.rawBuffer).join(", ")}>>`;
+  }
+}
+function echo$isDict(value2) {
+  try {
+    return value2 instanceof Dict;
+  } catch {
+    return false;
+  }
 }
 
 // build/dev/javascript/client/client.mjs
@@ -5332,7 +5773,6 @@ function view_index() {
         link(new Posts(), "read my ramblings ->")
       ])
     ),
-    element4(toList([])),
     element3(
       toList([route("/ws/counter")]),
       toList([element4(toList([]))])

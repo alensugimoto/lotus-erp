@@ -10,6 +10,7 @@ import gleam/pair
 import gleam/result
 import lustre
 import lustre/attribute.{type Attribute}
+import lustre/component
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
@@ -17,13 +18,14 @@ import lustre/event
 
 // MAIN ------------------------------------------------------------------------
 
-const component_name = "formy"
+const component_name = "my-form"
 
 const event_name = "change"
 
 //
 pub fn register() -> Result(Nil, lustre.Error) {
-  let component = lustre.component(init, update, view, [])
+  let component =
+    lustre.component(init, update, view, [component.open_shadow_root(True)])
   lustre.register(component, component_name)
 }
 
@@ -85,7 +87,7 @@ fn init(_) -> #(Model, effect.Effect(Msg)) {
       |> dict.insert(
         "customer_id",
         SingleField(
-          type_: "number",
+          type_: "text",
           required: True,
           value: "",
           json: json.null() |> Ok,
@@ -119,6 +121,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       |> pair.new(model, _)
     }
     UserUpdatedValue(name, value) -> {
+      echo #(name, value)
       model.fields
       |> dict.get(name)
       |> result.map(fn(field) {
