@@ -1850,6 +1850,9 @@ function sort(list4, compare5) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
+function is_empty(str) {
+  return str === "";
+}
 function concat_loop(loop$strings, loop$accumulator) {
   while (true) {
     let strings = loop$strings;
@@ -5319,6 +5322,14 @@ function fields_to_json(fields) {
   let _pipe$1 = try_map(_pipe, field_to_json);
   return map4(_pipe$1, object2);
 }
+function field_update(field2, value2) {
+  let $ = field2.required && is_empty(value2);
+  if ($) {
+    return new Error("Required");
+  } else {
+    return field2.update(value2);
+  }
+}
 function init2(_) {
   return [
     new Model(
@@ -5439,8 +5450,7 @@ function update2(model, msg) {
         let _pipe$22 = lazy_unwrap(
           _pipe$12,
           () => {
-            let _pipe$23 = field2.value;
-            return field2.update(_pipe$23);
+            return field_update(field2, field2.value);
           }
         );
         return new$7(_pipe$22, field2);
@@ -5486,7 +5496,7 @@ function update2(model, msg) {
   } else {
     let name2 = msg[0];
     let value2 = msg[1];
-    echo([name2, value2], "src/client/formy.gleam", 161);
+    echo([name2, value2], "src/client/formy.gleam", 166);
     let _pipe = model.fields;
     let _pipe$1 = map_get(_pipe, name2);
     let _pipe$2 = map4(
@@ -5506,7 +5516,9 @@ function update2(model, msg) {
                   value2,
                   (() => {
                     let _pipe$32 = value2;
-                    let _pipe$4 = field2.update(_pipe$32);
+                    let _pipe$4 = ((_capture) => {
+                      return field_update(field2, _capture);
+                    })(_pipe$32);
                     return new Some(_pipe$4);
                   })(),
                   _record.update

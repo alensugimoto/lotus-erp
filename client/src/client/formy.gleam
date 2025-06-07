@@ -9,6 +9,7 @@ import gleam/list
 import gleam/option
 import gleam/pair
 import gleam/result
+import gleam/string
 import lustre
 import lustre/attribute.{type Attribute}
 import lustre/component
@@ -61,6 +62,13 @@ fn field_to_json(
   json
   |> result.map(pair.new(name, _))
   |> result.replace_error(Nil)
+}
+
+fn field_update(field: Field, value: String) -> Result(json.Json, String) {
+  case field.required && string.is_empty(value) {
+    True -> Error("Required")
+    False -> field.update(value)
+  }
 }
 
 // MODEL -----------------------------------------------------------------------
@@ -127,10 +135,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         model.fields
         |> dict.map_values(fn(_name, field) {
           field.json
-          |> option.lazy_unwrap(fn() {
-            field.value
-            |> field.update
-          })
+          |> option.lazy_unwrap(fn() { field_update(field, field.value) })
           |> pair.new(field)
         })
 
@@ -170,7 +175,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
               ..field,
               value:,
               json: value
-                |> field.update
+                |> field_update(field, _)
                 |> option.Some,
             ),
           ),
