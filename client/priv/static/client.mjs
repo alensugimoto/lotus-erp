@@ -2,7 +2,7 @@
 var CustomType = class {
   withFields(fields) {
     let properties = Object.keys(this).map(
-      (label) => label in fields ? fields[label] : this[label]
+      (label2) => label2 in fields ? fields[label2] : this[label2]
     );
     return new this.constructor(...properties);
   }
@@ -44,8 +44,8 @@ var List = class {
     return length3 - 1;
   }
 };
-function prepend(element4, tail) {
-  return new NonEmpty(element4, tail);
+function prepend(element5, tail) {
+  return new NonEmpty(element5, tail);
 }
 function toList(elements, tail) {
   return List.fromArray(elements, tail);
@@ -156,11 +156,11 @@ var BitArray = class {
    * @param {number} index
    * @returns {number | undefined}
    */
-  byteAt(index3) {
-    if (index3 < 0 || index3 >= this.byteSize) {
+  byteAt(index4) {
+    if (index4 < 0 || index4 >= this.byteSize) {
       return void 0;
     }
-    return bitArrayByteAt(this.rawBuffer, this.bitOffset, index3);
+    return bitArrayByteAt(this.rawBuffer, this.bitOffset, index4);
   }
   /** @internal */
   equals(other) {
@@ -248,24 +248,24 @@ var BitArray = class {
     return this.rawBuffer.length;
   }
 };
-function bitArrayByteAt(buffer, bitOffset, index3) {
+function bitArrayByteAt(buffer, bitOffset, index4) {
   if (bitOffset === 0) {
-    return buffer[index3] ?? 0;
+    return buffer[index4] ?? 0;
   } else {
-    const a2 = buffer[index3] << bitOffset & 255;
-    const b = buffer[index3 + 1] >> 8 - bitOffset;
+    const a2 = buffer[index4] << bitOffset & 255;
+    const b = buffer[index4 + 1] >> 8 - bitOffset;
     return a2 | b;
   }
 }
 var isBitArrayDeprecationMessagePrinted = {};
-function bitArrayPrintDeprecationWarning(name, message2) {
-  if (isBitArrayDeprecationMessagePrinted[name]) {
+function bitArrayPrintDeprecationWarning(name2, message2) {
+  if (isBitArrayDeprecationMessagePrinted[name2]) {
     return;
   }
   console.warn(
-    `Deprecated BitArray.${name} property used in JavaScript FFI code. ${message2}.`
+    `Deprecated BitArray.${name2} property used in JavaScript FFI code. ${message2}.`
   );
-  isBitArrayDeprecationMessagePrinted[name] = true;
+  isBitArrayDeprecationMessagePrinted[name2] = true;
 }
 var Result = class _Result extends CustomType {
   // @internal
@@ -274,9 +274,9 @@ var Result = class _Result extends CustomType {
   }
 };
 var Ok = class extends Result {
-  constructor(value) {
+  constructor(value2) {
     super();
-    this[0] = value;
+    this[0] = value2;
   }
   // @internal
   isOk() {
@@ -294,10 +294,10 @@ var Error = class extends Result {
   }
 };
 function isEqual(x, y) {
-  let values2 = [x, y];
-  while (values2.length) {
-    let a2 = values2.pop();
-    let b = values2.pop();
+  let values3 = [x, y];
+  while (values3.length) {
+    let a2 = values3.pop();
+    let b = values3.pop();
     if (a2 === b) continue;
     if (!isObject(a2) || !isObject(b)) return false;
     let unequal = !structurallyCompatibleObjects(a2, b) || unequalDates(a2, b) || unequalBuffers(a2, b) || unequalArrays(a2, b) || unequalMaps(a2, b) || unequalSets(a2, b) || unequalRegExps(a2, b);
@@ -312,7 +312,7 @@ function isEqual(x, y) {
     }
     let [keys2, get2] = getters(a2);
     for (let k of keys2(a2)) {
-      values2.push(get2(a2, k), get2(b, k));
+      values3.push(get2(a2, k), get2(b, k));
     }
   }
   return true;
@@ -516,21 +516,21 @@ function bitcount(x) {
 function index(bitmap, bit) {
   return bitcount(bitmap & bit - 1);
 }
-function cloneAndSet(arr, at, val) {
+function cloneAndSet(arr, at2, val) {
   const len = arr.length;
   const out = new Array(len);
   for (let i = 0; i < len; ++i) {
     out[i] = arr[i];
   }
-  out[at] = val;
+  out[at2] = val;
   return out;
 }
-function spliceIn(arr, at, val) {
+function spliceIn(arr, at2, val) {
   const len = arr.length;
   const out = new Array(len + 1);
   let i = 0;
   let g = 0;
-  while (i < at) {
+  while (i < at2) {
     out[g++] = arr[i++];
   }
   out[g++] = val;
@@ -539,12 +539,12 @@ function spliceIn(arr, at, val) {
   }
   return out;
 }
-function spliceOut(arr, at) {
+function spliceOut(arr, at2) {
   const len = arr.length;
   const out = new Array(len - 1);
   let i = 0;
   let g = 0;
-  while (i < at) {
+  while (i < at2) {
     out[g++] = arr[i++];
   }
   ++i;
@@ -1087,8 +1087,8 @@ var Dict = class _Dict {
 var unequalDictSymbol = /* @__PURE__ */ Symbol();
 
 // build/dev/javascript/gleam_stdlib/gleam/dict.mjs
-function insert(dict2, key, value) {
-  return map_insert(key, value, dict2);
+function insert(dict2, key, value2) {
+  return map_insert(key, value2, dict2);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
@@ -1131,6 +1131,32 @@ function map_loop(loop$list, loop$fun, loop$acc) {
 }
 function map(list4, fun) {
   return map_loop(list4, fun, toList([]));
+}
+function try_map_loop(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list4 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list4.hasLength(0)) {
+      return new Ok(reverse(acc));
+    } else {
+      let first$1 = list4.head;
+      let rest$1 = list4.tail;
+      let $ = fun(first$1);
+      if ($.isOk()) {
+        let first$2 = $[0];
+        loop$list = rest$1;
+        loop$fun = fun;
+        loop$acc = prepend(first$2, acc);
+      } else {
+        let error = $[0];
+        return new Error(error);
+      }
+    }
+  }
+}
+function try_map(list4, fun) {
+  return try_map_loop(list4, fun, toList([]));
 }
 function append_loop(loop$first, loop$second) {
   while (true) {
@@ -1532,6 +1558,14 @@ function split2(x, substring) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/dynamic/decode.mjs
+var DecodeError = class extends CustomType {
+  constructor(expected, found, path) {
+    super();
+    this.expected = expected;
+    this.found = found;
+    this.path = path;
+  }
+};
 var Decoder = class extends CustomType {
   constructor(function$) {
     super();
@@ -1548,6 +1582,11 @@ function run(data, decoder) {
     return new Error(errors);
   }
 }
+function success(data) {
+  return new Decoder((_) => {
+    return [data, toList([])];
+  });
+}
 function map2(decoder, transformer) {
   return new Decoder(
     (d) => {
@@ -1558,6 +1597,163 @@ function map2(decoder, transformer) {
     }
   );
 }
+function run_decoders(loop$data, loop$failure, loop$decoders) {
+  while (true) {
+    let data = loop$data;
+    let failure2 = loop$failure;
+    let decoders = loop$decoders;
+    if (decoders.hasLength(0)) {
+      return failure2;
+    } else {
+      let decoder = decoders.head;
+      let decoders$1 = decoders.tail;
+      let $ = decoder.function(data);
+      let layer = $;
+      let errors = $[1];
+      if (errors.hasLength(0)) {
+        return layer;
+      } else {
+        loop$data = data;
+        loop$failure = failure2;
+        loop$decoders = decoders$1;
+      }
+    }
+  }
+}
+function one_of(first, alternatives) {
+  return new Decoder(
+    (dynamic_data) => {
+      let $ = first.function(dynamic_data);
+      let layer = $;
+      let errors = $[1];
+      if (errors.hasLength(0)) {
+        return layer;
+      } else {
+        return run_decoders(dynamic_data, layer, alternatives);
+      }
+    }
+  );
+}
+function run_dynamic_function(data, name2, f) {
+  let $ = f(data);
+  if ($.isOk()) {
+    let data$1 = $[0];
+    return [data$1, toList([])];
+  } else {
+    let zero = $[0];
+    return [
+      zero,
+      toList([new DecodeError(name2, classify_dynamic(data), toList([]))])
+    ];
+  }
+}
+function decode_int(data) {
+  return run_dynamic_function(data, "Int", int);
+}
+var int2 = /* @__PURE__ */ new Decoder(decode_int);
+function decode_string(data) {
+  return run_dynamic_function(data, "String", string);
+}
+var string2 = /* @__PURE__ */ new Decoder(decode_string);
+function push_path(layer, path) {
+  let decoder = one_of(
+    string2,
+    toList([
+      (() => {
+        let _pipe = int2;
+        return map2(_pipe, to_string);
+      })()
+    ])
+  );
+  let path$1 = map(
+    path,
+    (key) => {
+      let key$1 = identity(key);
+      let $ = run(key$1, decoder);
+      if ($.isOk()) {
+        let key$2 = $[0];
+        return key$2;
+      } else {
+        return "<" + classify_dynamic(key$1) + ">";
+      }
+    }
+  );
+  let errors = map(
+    layer[1],
+    (error) => {
+      let _record = error;
+      return new DecodeError(
+        _record.expected,
+        _record.found,
+        append(path$1, error.path)
+      );
+    }
+  );
+  return [layer[0], errors];
+}
+function index3(loop$path, loop$position, loop$inner, loop$data, loop$handle_miss) {
+  while (true) {
+    let path = loop$path;
+    let position = loop$position;
+    let inner = loop$inner;
+    let data = loop$data;
+    let handle_miss = loop$handle_miss;
+    if (path.hasLength(0)) {
+      let _pipe = inner(data);
+      return push_path(_pipe, reverse(position));
+    } else {
+      let key = path.head;
+      let path$1 = path.tail;
+      let $ = index2(data, key);
+      if ($.isOk() && $[0] instanceof Some) {
+        let data$1 = $[0][0];
+        loop$path = path$1;
+        loop$position = prepend(key, position);
+        loop$inner = inner;
+        loop$data = data$1;
+        loop$handle_miss = handle_miss;
+      } else if ($.isOk() && $[0] instanceof None) {
+        return handle_miss(data, prepend(key, position));
+      } else {
+        let kind = $[0];
+        let $1 = inner(data);
+        let default$ = $1[0];
+        let _pipe = [
+          default$,
+          toList([new DecodeError(kind, classify_dynamic(data), toList([]))])
+        ];
+        return push_path(_pipe, reverse(position));
+      }
+    }
+  }
+}
+function subfield(field_path, field_decoder, next) {
+  return new Decoder(
+    (data) => {
+      let $ = index3(
+        field_path,
+        toList([]),
+        field_decoder.function,
+        data,
+        (data2, position) => {
+          let $12 = field_decoder.function(data2);
+          let default$ = $12[0];
+          let _pipe = [
+            default$,
+            toList([new DecodeError("Field", "Nothing", toList([]))])
+          ];
+          return push_path(_pipe, reverse(position));
+        }
+      );
+      let out = $[0];
+      let errors1 = $[1];
+      let $1 = next(out).function(data);
+      let out$1 = $1[0];
+      let errors2 = $1[1];
+      return [out$1, append(errors1, errors2)];
+    }
+  );
+}
 
 // build/dev/javascript/gleam_stdlib/gleam_stdlib.mjs
 var Nil = void 0;
@@ -1565,9 +1761,9 @@ var NOT_FOUND = {};
 function identity(x) {
   return x;
 }
-function parse_int(value) {
-  if (/^[-+]?(\d+)$/.test(value)) {
-    return new Ok(parseInt(value));
+function parse_int(value2) {
+  if (/^[-+]?(\d+)$/.test(value2)) {
+    return new Ok(parseInt(value2));
   } else {
     return new Error(Nil);
   }
@@ -1623,15 +1819,76 @@ var trim_end_regex = /* @__PURE__ */ new RegExp(`[${unicode_whitespaces}]*$`);
 function new_map() {
   return Dict.new();
 }
-function map_get(map3, key) {
-  const value = map3.get(key, NOT_FOUND);
-  if (value === NOT_FOUND) {
+function map_to_list(map4) {
+  return List.fromArray(map4.entries());
+}
+function map_get(map4, key) {
+  const value2 = map4.get(key, NOT_FOUND);
+  if (value2 === NOT_FOUND) {
     return new Error(Nil);
   }
-  return new Ok(value);
+  return new Ok(value2);
 }
-function map_insert(key, value, map3) {
-  return map3.set(key, value);
+function map_insert(key, value2, map4) {
+  return map4.set(key, value2);
+}
+function classify_dynamic(data) {
+  if (typeof data === "string") {
+    return "String";
+  } else if (typeof data === "boolean") {
+    return "Bool";
+  } else if (data instanceof Result) {
+    return "Result";
+  } else if (data instanceof List) {
+    return "List";
+  } else if (data instanceof BitArray) {
+    return "BitArray";
+  } else if (data instanceof Dict) {
+    return "Dict";
+  } else if (Number.isInteger(data)) {
+    return "Int";
+  } else if (Array.isArray(data)) {
+    return `Array`;
+  } else if (typeof data === "number") {
+    return "Float";
+  } else if (data === null) {
+    return "Nil";
+  } else if (data === void 0) {
+    return "Nil";
+  } else {
+    const type = typeof data;
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+}
+function index2(data, key) {
+  if (data instanceof Dict || data instanceof WeakMap || data instanceof Map) {
+    const token2 = {};
+    const entry = data.get(key, token2);
+    if (entry === token2) return new Ok(new None());
+    return new Ok(new Some(entry));
+  }
+  const key_is_int = Number.isInteger(key);
+  if (key_is_int && key >= 0 && key < 8 && data instanceof List) {
+    let i = 0;
+    for (const value2 of data) {
+      if (i === key) return new Ok(new Some(value2));
+      i++;
+    }
+    return new Error("Indexable");
+  }
+  if (key_is_int && Array.isArray(data) || data && typeof data === "object" || data && Object.getPrototypeOf(data) === Object.prototype) {
+    if (key in data) return new Ok(new Some(data[key]));
+    return new Ok(new None());
+  }
+  return new Error(key_is_int ? "Indexable" : "Dict");
+}
+function int(data) {
+  if (Number.isInteger(data)) return new Ok(data);
+  return new Error(0);
+}
+function string(data) {
+  if (typeof data === "string") return new Ok(data);
+  return new Error("");
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
@@ -1664,13 +1921,13 @@ var Uri = class extends CustomType {
 };
 function remove_dot_segments_loop(loop$input, loop$accumulator) {
   while (true) {
-    let input = loop$input;
+    let input2 = loop$input;
     let accumulator = loop$accumulator;
-    if (input.hasLength(0)) {
+    if (input2.hasLength(0)) {
       return reverse(accumulator);
     } else {
-      let segment = input.head;
-      let rest = input.tail;
+      let segment = input2.head;
+      let rest = input2.tail;
       let _block;
       if (segment === "") {
         let accumulator$12 = accumulator;
@@ -1694,8 +1951,8 @@ function remove_dot_segments_loop(loop$input, loop$accumulator) {
     }
   }
 }
-function remove_dot_segments(input) {
-  return remove_dot_segments_loop(input, toList([]));
+function remove_dot_segments(input2) {
+  return remove_dot_segments_loop(input2, toList([]));
 }
 function path_segments(path) {
   return remove_dot_segments(split2(path, "/"));
@@ -1722,6 +1979,85 @@ function is_ok(result) {
   } else {
     return true;
   }
+}
+function map3(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return new Ok(fun(x));
+  } else {
+    let e = result[0];
+    return new Error(e);
+  }
+}
+function map_error(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return new Ok(x);
+  } else {
+    let error = result[0];
+    return new Error(fun(error));
+  }
+}
+function unwrap(result, default$) {
+  if (result.isOk()) {
+    let v = result[0];
+    return v;
+  } else {
+    return default$;
+  }
+}
+function unwrap_both(result) {
+  if (result.isOk()) {
+    let a2 = result[0];
+    return a2;
+  } else {
+    let a2 = result[0];
+    return a2;
+  }
+}
+function replace2(result, value2) {
+  if (result.isOk()) {
+    return new Ok(value2);
+  } else {
+    let error = result[0];
+    return new Error(error);
+  }
+}
+function replace_error(result, error) {
+  if (result.isOk()) {
+    let x = result[0];
+    return new Ok(x);
+  } else {
+    return new Error(error);
+  }
+}
+
+// build/dev/javascript/gleam_json/gleam_json_ffi.mjs
+function object(entries) {
+  return Object.fromEntries(entries);
+}
+function identity3(x) {
+  return x;
+}
+function do_null() {
+  return null;
+}
+
+// build/dev/javascript/gleam_json/gleam/json.mjs
+function string3(input2) {
+  return identity3(input2);
+}
+function bool(input2) {
+  return identity3(input2);
+}
+function int3(input2) {
+  return identity3(input2);
+}
+function null$() {
+  return do_null();
+}
+function object2(entries) {
+  return object(entries);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/set.mjs
@@ -1780,26 +2116,26 @@ function compare3(a2, b) {
 
 // build/dev/javascript/lustre/lustre/vdom/vattr.mjs
 var Attribute = class extends CustomType {
-  constructor(kind, name, value) {
+  constructor(kind, name2, value2) {
     super();
     this.kind = kind;
-    this.name = name;
-    this.value = value;
+    this.name = name2;
+    this.value = value2;
   }
 };
 var Property = class extends CustomType {
-  constructor(kind, name, value) {
+  constructor(kind, name2, value2) {
     super();
     this.kind = kind;
-    this.name = name;
-    this.value = value;
+    this.name = name2;
+    this.value = value2;
   }
 };
 var Event2 = class extends CustomType {
-  constructor(kind, name, handler, include, prevent_default, stop_propagation, immediate2, debounce, throttle) {
+  constructor(kind, name2, handler, include, prevent_default, stop_propagation, immediate2, debounce, throttle) {
     super();
     this.kind = kind;
-    this.name = name;
+    this.name = name2;
     this.handler = handler;
     this.include = include;
     this.prevent_default = prevent_default;
@@ -1832,8 +2168,8 @@ function merge(loop$attributes, loop$merged) {
       let class1 = attributes.head.value;
       let class2 = attributes.tail.head.value;
       let rest = attributes.tail.tail;
-      let value = class1 + " " + class2;
-      let attribute$1 = new Attribute(kind, "class", value);
+      let value2 = class1 + " " + class2;
+      let attribute$1 = new Attribute(kind, "class", value2);
       loop$attributes = prepend(attribute$1, rest);
       loop$merged = merged;
     } else if (attributes.atLeastLength(2) && attributes.head instanceof Attribute && attributes.head.name === "style" && attributes.tail.head instanceof Attribute && attributes.tail.head.name === "style") {
@@ -1841,8 +2177,8 @@ function merge(loop$attributes, loop$merged) {
       let style1 = attributes.head.value;
       let style2 = attributes.tail.head.value;
       let rest = attributes.tail.tail;
-      let value = style1 + ";" + style2;
-      let attribute$1 = new Attribute(kind, "style", value);
+      let value2 = style1 + ";" + style2;
+      let attribute$1 = new Attribute(kind, "style", value2);
       loop$attributes = prepend(attribute$1, rest);
       loop$merged = merged;
     } else {
@@ -1867,18 +2203,44 @@ function prepare(attributes) {
   }
 }
 var attribute_kind = 0;
-function attribute(name, value) {
-  return new Attribute(attribute_kind, name, value);
+function attribute(name2, value2) {
+  return new Attribute(attribute_kind, name2, value2);
 }
 var property_kind = 1;
+function property(name2, value2) {
+  return new Property(property_kind, name2, value2);
+}
 var event_kind = 2;
+function event(name2, handler, include, prevent_default, stop_propagation, immediate2, debounce, throttle) {
+  return new Event2(
+    event_kind,
+    name2,
+    handler,
+    include,
+    prevent_default,
+    stop_propagation,
+    immediate2,
+    debounce,
+    throttle
+  );
+}
 
 // build/dev/javascript/lustre/lustre/attribute.mjs
-function attribute2(name, value) {
-  return attribute(name, value);
+function attribute2(name2, value2) {
+  return attribute(name2, value2);
 }
-function class$(name) {
-  return attribute2("class", name);
+function property2(name2, value2) {
+  return property(name2, value2);
+}
+function boolean_attribute(name2, value2) {
+  if (value2) {
+    return attribute2(name2, "");
+  } else {
+    return property2(name2, bool(false));
+  }
+}
+function class$(name2) {
+  return attribute2("class", name2);
 }
 function do_classes(loop$names, loop$class) {
   while (true) {
@@ -1900,8 +2262,26 @@ function do_classes(loop$names, loop$class) {
 function classes(names) {
   return class$(do_classes(names, ""));
 }
+function id(value2) {
+  return attribute2("id", value2);
+}
 function href(url) {
   return attribute2("href", url);
+}
+function for$(id2) {
+  return attribute2("for", id2);
+}
+function name(element_name) {
+  return attribute2("name", element_name);
+}
+function required(is_required) {
+  return boolean_attribute("required", is_required);
+}
+function type_(control_type) {
+  return attribute2("type", control_type);
+}
+function value(control_value) {
+  return attribute2("value", control_value);
 }
 
 // build/dev/javascript/lustre/lustre/effect.mjs
@@ -1929,27 +2309,34 @@ function from(effect) {
   let _record = empty;
   return new Effect(toList([task]), _record.before_paint, _record.after_paint);
 }
+function event2(name2, data) {
+  let task = (actions) => {
+    return actions.emit(name2, data);
+  };
+  let _record = empty;
+  return new Effect(toList([task]), _record.before_paint, _record.after_paint);
+}
 
 // build/dev/javascript/lustre/lustre/internals/mutable_map.ffi.mjs
 function empty2() {
   return null;
 }
-function get(map3, key) {
-  const value = map3?.get(key);
-  if (value != null) {
-    return new Ok(value);
+function get(map4, key) {
+  const value2 = map4?.get(key);
+  if (value2 != null) {
+    return new Ok(value2);
   } else {
     return new Error(void 0);
   }
 }
-function insert3(map3, key, value) {
-  map3 ??= /* @__PURE__ */ new Map();
-  map3.set(key, value);
-  return map3;
+function insert3(map4, key, value2) {
+  map4 ??= /* @__PURE__ */ new Map();
+  map4.set(key, value2);
+  return map4;
 }
-function remove(map3, key) {
-  map3?.delete(key);
-  return map3;
+function remove(map4, key) {
+  map4?.delete(key);
+  return map4;
 }
 
 // build/dev/javascript/lustre/lustre/vdom/path.mjs
@@ -1963,9 +2350,9 @@ var Key = class extends CustomType {
   }
 };
 var Index = class extends CustomType {
-  constructor(index3, parent) {
+  constructor(index4, parent) {
     super();
-    this.index = index3;
+    this.index = index4;
     this.parent = parent;
   }
 };
@@ -1988,9 +2375,9 @@ function do_matches(loop$path, loop$candidates) {
     }
   }
 }
-function add2(parent, index3, key) {
+function add2(parent, index4, key) {
   if (key === "") {
-    return new Index(index3, parent);
+    return new Index(index4, parent);
   } else {
     return new Key(key, parent);
   }
@@ -2015,12 +2402,12 @@ function do_to_string(loop$path, loop$acc) {
       loop$path = parent;
       loop$acc = prepend(separator_key, prepend(key, acc));
     } else {
-      let index3 = path.index;
+      let index4 = path.index;
       let parent = path.parent;
       loop$path = parent;
       loop$acc = prepend(
         separator_index,
-        prepend(to_string(index3), acc)
+        prepend(to_string(index4), acc)
       );
     }
   }
@@ -2036,8 +2423,8 @@ function matches(path, candidates) {
   }
 }
 var separator_event = "\f";
-function event(path, event3) {
-  return do_to_string(path, toList([separator_event, event3]));
+function event3(path, event4) {
+  return do_to_string(path, toList([separator_event, event4]));
 }
 
 // build/dev/javascript/lustre/lustre/vdom/vnode.mjs
@@ -2168,7 +2555,7 @@ function set_fragment_key(loop$key, loop$children, loop$index, loop$new_children
   while (true) {
     let key = loop$key;
     let children = loop$children;
-    let index3 = loop$index;
+    let index4 = loop$index;
     let new_children = loop$new_children;
     let keyed_children = loop$keyed_children;
     if (children.hasLength(0)) {
@@ -2176,7 +2563,7 @@ function set_fragment_key(loop$key, loop$children, loop$index, loop$new_children
     } else if (children.atLeastLength(1) && children.head instanceof Fragment && children.head.key === "") {
       let node = children.head;
       let children$1 = children.tail;
-      let child_key = key + "::" + to_string(index3);
+      let child_key = key + "::" + to_string(index4);
       let $ = set_fragment_key(
         child_key,
         node.children,
@@ -2198,7 +2585,7 @@ function set_fragment_key(loop$key, loop$children, loop$index, loop$new_children
       );
       let new_node = _block;
       let new_children$1 = prepend(new_node, new_children);
-      let index$1 = index3 + 1;
+      let index$1 = index4 + 1;
       loop$key = key;
       loop$children = children$1;
       loop$index = index$1;
@@ -2215,7 +2602,7 @@ function set_fragment_key(loop$key, loop$children, loop$index, loop$new_children
         child_key,
         keyed_node
       );
-      let index$1 = index3 + 1;
+      let index$1 = index4 + 1;
       loop$key = key;
       loop$children = children$1;
       loop$index = index$1;
@@ -2225,7 +2612,7 @@ function set_fragment_key(loop$key, loop$children, loop$index, loop$new_children
       let node = children.head;
       let children$1 = children.tail;
       let new_children$1 = prepend(node, new_children);
-      let index$1 = index3 + 1;
+      let index$1 = index4 + 1;
       loop$key = key;
       loop$children = children$1;
       loop$index = index$1;
@@ -2288,9 +2675,9 @@ function to_keyed(key, node) {
 
 // build/dev/javascript/lustre/lustre/vdom/patch.mjs
 var Patch = class extends CustomType {
-  constructor(index3, removed, changes, children) {
+  constructor(index4, removed, changes, children) {
     super();
-    this.index = index3;
+    this.index = index4;
     this.removed = removed;
     this.changes = changes;
     this.children = children;
@@ -2360,8 +2747,8 @@ var Remove = class extends CustomType {
     this.count = count;
   }
 };
-function new$4(index3, removed, changes, children) {
-  return new Patch(index3, removed, changes, children);
+function new$4(index4, removed, changes, children) {
+  return new Patch(index4, removed, changes, children);
 }
 var replace_text_kind = 0;
 function replace_text(content) {
@@ -2384,7 +2771,7 @@ function remove_key(key, count) {
   return new RemoveKey(remove_key_kind, key, count);
 }
 var replace_kind = 5;
-function replace2(from2, count, with$) {
+function replace3(from2, count, with$) {
   return new Replace(replace_kind, from2, count, with$);
 }
 var insert_kind = 6;
@@ -2430,26 +2817,26 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
     let mapper = loop$mapper;
     let events = loop$events;
     let old = loop$old;
-    let new$7 = loop$new;
+    let new$8 = loop$new;
     let added = loop$added;
     let removed = loop$removed;
-    if (old.hasLength(0) && new$7.hasLength(0)) {
+    if (old.hasLength(0) && new$8.hasLength(0)) {
       return new AttributeChange(added, removed, events);
-    } else if (old.atLeastLength(1) && old.head instanceof Event2 && new$7.hasLength(0)) {
+    } else if (old.atLeastLength(1) && old.head instanceof Event2 && new$8.hasLength(0)) {
       let prev = old.head;
-      let name = old.head.name;
+      let name2 = old.head.name;
       let old$1 = old.tail;
       let removed$1 = prepend(prev, removed);
-      let events$1 = remove_event(events, path, name);
+      let events$1 = remove_event(events, path, name2);
       loop$controlled = controlled;
       loop$path = path;
       loop$mapper = mapper;
       loop$events = events$1;
       loop$old = old$1;
-      loop$new = new$7;
+      loop$new = new$8;
       loop$added = added;
       loop$removed = removed$1;
-    } else if (old.atLeastLength(1) && new$7.hasLength(0)) {
+    } else if (old.atLeastLength(1) && new$8.hasLength(0)) {
       let prev = old.head;
       let old$1 = old.tail;
       let removed$1 = prepend(prev, removed);
@@ -2458,16 +2845,16 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
       loop$mapper = mapper;
       loop$events = events;
       loop$old = old$1;
-      loop$new = new$7;
+      loop$new = new$8;
       loop$added = added;
       loop$removed = removed$1;
-    } else if (old.hasLength(0) && new$7.atLeastLength(1) && new$7.head instanceof Event2) {
-      let next = new$7.head;
-      let name = new$7.head.name;
-      let handler = new$7.head.handler;
-      let new$1 = new$7.tail;
+    } else if (old.hasLength(0) && new$8.atLeastLength(1) && new$8.head instanceof Event2) {
+      let next = new$8.head;
+      let name2 = new$8.head.name;
+      let handler = new$8.head.handler;
+      let new$1 = new$8.tail;
       let added$1 = prepend(next, added);
-      let events$1 = add_event(events, mapper, path, name, handler);
+      let events$1 = add_event(events, mapper, path, name2, handler);
       loop$controlled = controlled;
       loop$path = path;
       loop$mapper = mapper;
@@ -2476,9 +2863,9 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
       loop$new = new$1;
       loop$added = added$1;
       loop$removed = removed;
-    } else if (old.hasLength(0) && new$7.atLeastLength(1)) {
-      let next = new$7.head;
-      let new$1 = new$7.tail;
+    } else if (old.hasLength(0) && new$8.atLeastLength(1)) {
+      let next = new$8.head;
+      let new$1 = new$8.tail;
       let added$1 = prepend(next, added);
       loop$controlled = controlled;
       loop$path = path;
@@ -2491,8 +2878,8 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
     } else {
       let prev = old.head;
       let remaining_old = old.tail;
-      let next = new$7.head;
-      let remaining_new = new$7.tail;
+      let next = new$8.head;
+      let remaining_new = new$8.tail;
       let $ = compare3(prev, next);
       if (prev instanceof Attribute && $ instanceof Eq && next instanceof Attribute) {
         let _block;
@@ -2555,7 +2942,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed;
       } else if (prev instanceof Event2 && $ instanceof Eq && next instanceof Event2) {
-        let name = next.name;
+        let name2 = next.name;
         let handler = next.handler;
         let has_changes = prev.prevent_default !== next.prevent_default || prev.stop_propagation !== next.stop_propagation || prev.immediate !== next.immediate || prev.debounce !== next.debounce || prev.throttle !== next.throttle;
         let _block;
@@ -2565,7 +2952,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
           _block = added;
         }
         let added$1 = _block;
-        let events$1 = add_event(events, mapper, path, name, handler);
+        let events$1 = add_event(events, mapper, path, name2, handler);
         loop$controlled = controlled;
         loop$path = path;
         loop$mapper = mapper;
@@ -2575,10 +2962,10 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed;
       } else if (prev instanceof Event2 && $ instanceof Eq) {
-        let name = prev.name;
+        let name2 = prev.name;
         let added$1 = prepend(next, added);
         let removed$1 = prepend(prev, removed);
-        let events$1 = remove_event(events, path, name);
+        let events$1 = remove_event(events, path, name2);
         loop$controlled = controlled;
         loop$path = path;
         loop$mapper = mapper;
@@ -2588,11 +2975,11 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed$1;
       } else if ($ instanceof Eq && next instanceof Event2) {
-        let name = next.name;
+        let name2 = next.name;
         let handler = next.handler;
         let added$1 = prepend(next, added);
         let removed$1 = prepend(prev, removed);
-        let events$1 = add_event(events, mapper, path, name, handler);
+        let events$1 = add_event(events, mapper, path, name2, handler);
         loop$controlled = controlled;
         loop$path = path;
         loop$mapper = mapper;
@@ -2613,10 +3000,10 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed$1;
       } else if ($ instanceof Gt && next instanceof Event2) {
-        let name = next.name;
+        let name2 = next.name;
         let handler = next.handler;
         let added$1 = prepend(next, added);
-        let events$1 = add_event(events, mapper, path, name, handler);
+        let events$1 = add_event(events, mapper, path, name2, handler);
         loop$controlled = controlled;
         loop$path = path;
         loop$mapper = mapper;
@@ -2636,15 +3023,15 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed;
       } else if (prev instanceof Event2 && $ instanceof Lt) {
-        let name = prev.name;
+        let name2 = prev.name;
         let removed$1 = prepend(prev, removed);
-        let events$1 = remove_event(events, path, name);
+        let events$1 = remove_event(events, path, name2);
         loop$controlled = controlled;
         loop$path = path;
         loop$mapper = mapper;
         loop$events = events$1;
         loop$old = remaining_old;
-        loop$new = new$7;
+        loop$new = new$8;
         loop$added = added;
         loop$removed = removed$1;
       } else {
@@ -2654,7 +3041,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$mapper = mapper;
         loop$events = events;
         loop$old = remaining_old;
-        loop$new = new$7;
+        loop$new = new$8;
         loop$added = added;
         loop$removed = removed$1;
       }
@@ -2665,7 +3052,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
   while (true) {
     let old = loop$old;
     let old_keyed = loop$old_keyed;
-    let new$7 = loop$new;
+    let new$8 = loop$new;
     let new_keyed = loop$new_keyed;
     let moved = loop$moved;
     let moved_offset = loop$moved_offset;
@@ -2677,12 +3064,12 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
     let children = loop$children;
     let mapper = loop$mapper;
     let events = loop$events;
-    if (old.hasLength(0) && new$7.hasLength(0)) {
+    if (old.hasLength(0) && new$8.hasLength(0)) {
       return new Diff(
         new Patch(patch_index, removed, changes, children),
         events
       );
-    } else if (old.atLeastLength(1) && new$7.hasLength(0)) {
+    } else if (old.atLeastLength(1) && new$8.hasLength(0)) {
       let prev = old.head;
       let old$1 = old.tail;
       let _block;
@@ -2696,7 +3083,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       let events$1 = remove_child(events, path, node_index, prev);
       loop$old = old$1;
       loop$old_keyed = old_keyed;
-      loop$new = new$7;
+      loop$new = new$8;
       loop$new_keyed = new_keyed;
       loop$moved = moved;
       loop$moved_offset = moved_offset;
@@ -2708,32 +3095,32 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       loop$children = children;
       loop$mapper = mapper;
       loop$events = events$1;
-    } else if (old.hasLength(0) && new$7.atLeastLength(1)) {
+    } else if (old.hasLength(0) && new$8.atLeastLength(1)) {
       let events$1 = add_children(
         events,
         mapper,
         path,
         node_index,
-        new$7
+        new$8
       );
-      let insert5 = insert4(new$7, node_index - moved_offset);
+      let insert5 = insert4(new$8, node_index - moved_offset);
       let changes$1 = prepend(insert5, changes);
       return new Diff(
         new Patch(patch_index, removed, changes$1, children),
         events$1
       );
-    } else if (old.atLeastLength(1) && new$7.atLeastLength(1) && old.head.key !== new$7.head.key) {
+    } else if (old.atLeastLength(1) && new$8.atLeastLength(1) && old.head.key !== new$8.head.key) {
       let prev = old.head;
       let old_remaining = old.tail;
-      let next = new$7.head;
-      let new_remaining = new$7.tail;
+      let next = new$8.head;
+      let new_remaining = new$8.tail;
       let next_did_exist = get(old_keyed, next.key);
       let prev_does_exist = get(new_keyed, prev.key);
       let prev_has_moved = contains(moved, prev.key);
       if (prev_does_exist.isOk() && next_did_exist.isOk() && prev_has_moved) {
         loop$old = old_remaining;
         loop$old_keyed = old_keyed;
-        loop$new = new$7;
+        loop$new = new$8;
         loop$new_keyed = new_keyed;
         loop$moved = moved;
         loop$moved_offset = moved_offset - advance(prev);
@@ -2755,7 +3142,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
         let moved_offset$1 = moved_offset + count;
         loop$old = prepend(match, old);
         loop$old_keyed = old_keyed;
-        loop$new = new$7;
+        loop$new = new$8;
         loop$new_keyed = new_keyed;
         loop$moved = moved$1;
         loop$moved_offset = moved_offset$1;
@@ -2775,7 +3162,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
         let changes$1 = prepend(remove3, changes);
         loop$old = old_remaining;
         loop$old_keyed = old_keyed;
-        loop$new = new$7;
+        loop$new = new$8;
         loop$new_keyed = new_keyed;
         loop$moved = moved;
         loop$moved_offset = moved_offset$1;
@@ -2810,7 +3197,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       } else {
         let prev_count = advance(prev);
         let next_count = advance(next);
-        let change = replace2(node_index - moved_offset, prev_count, next);
+        let change = replace3(node_index - moved_offset, prev_count, next);
         let _block;
         let _pipe = events;
         let _pipe$1 = remove_child(_pipe, path, node_index, prev);
@@ -2831,11 +3218,11 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
         loop$mapper = mapper;
         loop$events = events$1;
       }
-    } else if (old.atLeastLength(1) && old.head instanceof Fragment && new$7.atLeastLength(1) && new$7.head instanceof Fragment) {
+    } else if (old.atLeastLength(1) && old.head instanceof Fragment && new$8.atLeastLength(1) && new$8.head instanceof Fragment) {
       let prev = old.head;
       let old$1 = old.tail;
-      let next = new$7.head;
-      let new$1 = new$7.tail;
+      let next = new$8.head;
+      let new$1 = new$8.tail;
       let node_index$1 = node_index + 1;
       let prev_count = prev.children_count;
       let next_count = next.children_count;
@@ -2880,11 +3267,11 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       loop$children = child.patch.children;
       loop$mapper = mapper;
       loop$events = child.events;
-    } else if (old.atLeastLength(1) && old.head instanceof Element && new$7.atLeastLength(1) && new$7.head instanceof Element && (old.head.namespace === new$7.head.namespace && old.head.tag === new$7.head.tag)) {
+    } else if (old.atLeastLength(1) && old.head instanceof Element && new$8.atLeastLength(1) && new$8.head instanceof Element && (old.head.namespace === new$8.head.namespace && old.head.tag === new$8.head.tag)) {
       let prev = old.head;
       let old$1 = old.tail;
-      let next = new$7.head;
-      let new$1 = new$7.tail;
+      let next = new$8.head;
+      let new$1 = new$8.tail;
       let composed_mapper = compose_mapper(mapper, next.mapper);
       let child_path = add2(path, node_index, next.key);
       let controlled = is_controlled(
@@ -2951,11 +3338,11 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       loop$children = children$1;
       loop$mapper = mapper;
       loop$events = child.events;
-    } else if (old.atLeastLength(1) && old.head instanceof Text && new$7.atLeastLength(1) && new$7.head instanceof Text && old.head.content === new$7.head.content) {
+    } else if (old.atLeastLength(1) && old.head instanceof Text && new$8.atLeastLength(1) && new$8.head instanceof Text && old.head.content === new$8.head.content) {
       let prev = old.head;
       let old$1 = old.tail;
-      let next = new$7.head;
-      let new$1 = new$7.tail;
+      let next = new$8.head;
+      let new$1 = new$8.tail;
       loop$old = old$1;
       loop$old_keyed = old_keyed;
       loop$new = new$1;
@@ -2970,10 +3357,10 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       loop$children = children;
       loop$mapper = mapper;
       loop$events = events;
-    } else if (old.atLeastLength(1) && old.head instanceof Text && new$7.atLeastLength(1) && new$7.head instanceof Text) {
+    } else if (old.atLeastLength(1) && old.head instanceof Text && new$8.atLeastLength(1) && new$8.head instanceof Text) {
       let old$1 = old.tail;
-      let next = new$7.head;
-      let new$1 = new$7.tail;
+      let next = new$8.head;
+      let new$1 = new$8.tail;
       let child = new$4(
         node_index,
         0,
@@ -2994,11 +3381,11 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       loop$children = prepend(child, children);
       loop$mapper = mapper;
       loop$events = events;
-    } else if (old.atLeastLength(1) && old.head instanceof UnsafeInnerHtml && new$7.atLeastLength(1) && new$7.head instanceof UnsafeInnerHtml) {
+    } else if (old.atLeastLength(1) && old.head instanceof UnsafeInnerHtml && new$8.atLeastLength(1) && new$8.head instanceof UnsafeInnerHtml) {
       let prev = old.head;
       let old$1 = old.tail;
-      let next = new$7.head;
-      let new$1 = new$7.tail;
+      let next = new$8.head;
+      let new$1 = new$8.tail;
       let composed_mapper = compose_mapper(mapper, next.mapper);
       let child_path = add2(path, node_index, next.key);
       let $ = diff_attributes(
@@ -3059,11 +3446,11 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
     } else {
       let prev = old.head;
       let old_remaining = old.tail;
-      let next = new$7.head;
-      let new_remaining = new$7.tail;
+      let next = new$8.head;
+      let new_remaining = new$8.tail;
       let prev_count = advance(prev);
       let next_count = advance(next);
-      let change = replace2(node_index - moved_offset, prev_count, next);
+      let change = replace3(node_index - moved_offset, prev_count, next);
       let _block;
       let _pipe = events;
       let _pipe$1 = remove_child(_pipe, path, node_index, prev);
@@ -3086,11 +3473,11 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
     }
   }
 }
-function diff(events, old, new$7) {
+function diff(events, old, new$8) {
   return do_diff(
     toList([old]),
     empty2(),
-    toList([new$7]),
+    toList([new$8]),
     empty2(),
     empty_set(),
     0,
@@ -3186,11 +3573,11 @@ var Reconciler = class {
       let lastIndex = -1;
       let lastChild = null;
       iterate(patch.children, (child) => {
-        const index3 = child.index | 0;
-        const next = lastChild && lastIndex - index3 === 1 ? lastChild.previousSibling : childAt(node, index3);
+        const index4 = child.index | 0;
+        const next = lastChild && lastIndex - index4 === 1 ? lastChild.previousSibling : childAt(node, index4);
         self.#stack.push({ node: next, patch: child });
         lastChild = next;
-        lastIndex = index3;
+        lastIndex = index4;
       });
     }
   }
@@ -3249,20 +3636,20 @@ var Reconciler = class {
   }
   #update(node, added, removed) {
     iterate(removed, (attribute3) => {
-      const name = attribute3.name;
-      if (node[meta].handlers.has(name)) {
-        node.removeEventListener(name, handleEvent);
-        node[meta].handlers.delete(name);
-        if (node[meta].throttles.has(name)) {
-          node[meta].throttles.delete(name);
+      const name2 = attribute3.name;
+      if (node[meta].handlers.has(name2)) {
+        node.removeEventListener(name2, handleEvent);
+        node[meta].handlers.delete(name2);
+        if (node[meta].throttles.has(name2)) {
+          node[meta].throttles.delete(name2);
         }
-        if (node[meta].debouncers.has(name)) {
-          clearTimeout(node[meta].debouncers.get(name).timeout);
-          node[meta].debouncers.delete(name);
+        if (node[meta].debouncers.has(name2)) {
+          clearTimeout(node[meta].debouncers.get(name2).timeout);
+          node[meta].debouncers.delete(name2);
         }
       } else {
-        node.removeAttribute(name);
-        SYNCED_ATTRIBUTES[name]?.removed?.(node, name);
+        node.removeAttribute(name2);
+        SYNCED_ATTRIBUTES[name2]?.removed?.(node, name2);
       }
     });
     iterate(added, (attribute3) => {
@@ -3305,8 +3692,8 @@ var Reconciler = class {
     const { debouncers, handlers, throttles } = node[meta];
     const {
       kind,
-      name,
-      value,
+      name: name2,
+      value: value2,
       prevent_default: prevent,
       stop_propagation: stop,
       immediate: immediate2,
@@ -3316,47 +3703,47 @@ var Reconciler = class {
     } = attribute3;
     switch (kind) {
       case attribute_kind: {
-        const valueOrDefault = value ?? "";
-        if (name === "virtual:defaultValue") {
+        const valueOrDefault = value2 ?? "";
+        if (name2 === "virtual:defaultValue") {
           node.defaultValue = valueOrDefault;
           return;
         }
-        if (valueOrDefault !== node.getAttribute(name)) {
-          node.setAttribute(name, valueOrDefault);
+        if (valueOrDefault !== node.getAttribute(name2)) {
+          node.setAttribute(name2, valueOrDefault);
         }
-        SYNCED_ATTRIBUTES[name]?.added?.(node, value);
+        SYNCED_ATTRIBUTES[name2]?.added?.(node, value2);
         break;
       }
       case property_kind:
-        node[name] = value;
+        node[name2] = value2;
         break;
       case event_kind: {
-        if (!handlers.has(name)) {
-          node.addEventListener(name, handleEvent, {
+        if (!handlers.has(name2)) {
+          node.addEventListener(name2, handleEvent, {
             passive: !attribute3.prevent_default
           });
         }
         if (throttleDelay > 0) {
-          const throttle = throttles.get(name) ?? {};
+          const throttle = throttles.get(name2) ?? {};
           throttle.delay = throttleDelay;
-          throttles.set(name, throttle);
+          throttles.set(name2, throttle);
         } else {
-          throttles.delete(name);
+          throttles.delete(name2);
         }
         if (debounceDelay > 0) {
-          const debounce = debouncers.get(name) ?? {};
+          const debounce = debouncers.get(name2) ?? {};
           debounce.delay = debounceDelay;
-          debouncers.set(name, debounce);
+          debouncers.set(name2, debounce);
         } else {
-          clearTimeout(debouncers.get(name)?.timeout);
-          debouncers.delete(name);
+          clearTimeout(debouncers.get(name2)?.timeout);
+          debouncers.delete(name2);
         }
-        handlers.set(name, (event3) => {
-          if (prevent) event3.preventDefault();
-          if (stop) event3.stopPropagation();
-          const type = event3.type;
+        handlers.set(name2, (event4) => {
+          if (prevent) event4.preventDefault();
+          if (stop) event4.stopPropagation();
+          const type = event4.type;
           let path = "";
-          let pathNode = event3.currentTarget;
+          let pathNode = event4.currentTarget;
           while (pathNode !== this.#root) {
             const key = pathNode[meta].key;
             const parent = pathNode.parentNode;
@@ -3364,33 +3751,33 @@ var Reconciler = class {
               path = `${separator_key}${key}${path}`;
             } else {
               const siblings = parent.childNodes;
-              let index3 = [].indexOf.call(siblings, pathNode);
+              let index4 = [].indexOf.call(siblings, pathNode);
               if (parent === this.#root) {
-                index3 -= this.offset;
+                index4 -= this.offset;
               }
-              path = `${separator_index}${index3}${path}`;
+              path = `${separator_index}${index4}${path}`;
             }
             pathNode = parent;
           }
           path = path.slice(1);
-          const data = this.#useServerEvents ? createServerEvent(event3, include ?? []) : event3;
+          const data = this.#useServerEvents ? createServerEvent(event4, include ?? []) : event4;
           const throttle = throttles.get(type);
           if (throttle) {
             const now = Date.now();
             const last = throttle.last || 0;
             if (now > last + throttle.delay) {
               throttle.last = now;
-              throttle.lastEvent = event3;
+              throttle.lastEvent = event4;
               this.#dispatch(data, path, type, immediate2);
             } else {
-              event3.preventDefault();
+              event4.preventDefault();
             }
           }
           const debounce = debouncers.get(type);
           if (debounce) {
             clearTimeout(debounce.timeout);
             debounce.timeout = setTimeout(() => {
-              if (event3 === throttles.get(type)?.lastEvent) return;
+              if (event4 === throttles.get(type)?.lastEvent) return;
               this.#dispatch(data, path, type, immediate2);
             }, debounce.delay);
           } else {
@@ -3426,7 +3813,7 @@ var createChildText = (parent, { key, content }) => {
   return node;
 };
 var createDocumentFragment = () => document2.createDocumentFragment();
-var childAt = (node, at) => node.childNodes[at | 0];
+var childAt = (node, at2) => node.childNodes[at2 | 0];
 var meta = Symbol("lustre");
 var initialiseMetadata = (parent, node, key = "") => {
   switch (node.nodeType) {
@@ -3449,50 +3836,50 @@ var initialiseMetadata = (parent, node, key = "") => {
   }
 };
 var getKeyedChild = (node, key) => node[meta].keyedChildren.get(key).deref();
-var handleEvent = (event3) => {
-  const target = event3.currentTarget;
-  const handler = target[meta].handlers.get(event3.type);
-  if (event3.type === "submit") {
-    event3.detail ??= {};
-    event3.detail.formData = [...new FormData(event3.target).entries()];
+var handleEvent = (event4) => {
+  const target = event4.currentTarget;
+  const handler = target[meta].handlers.get(event4.type);
+  if (event4.type === "submit") {
+    event4.detail ??= {};
+    event4.detail.formData = [...new FormData(event4.target).entries()];
   }
-  handler(event3);
+  handler(event4);
 };
-var createServerEvent = (event3, include = []) => {
+var createServerEvent = (event4, include = []) => {
   const data = {};
-  if (event3.type === "input" || event3.type === "change") {
+  if (event4.type === "input" || event4.type === "change") {
     include.push("target.value");
   }
-  if (event3.type === "submit") {
+  if (event4.type === "submit") {
     include.push("detail.formData");
   }
   for (const property3 of include) {
     const path = property3.split(".");
-    for (let i = 0, input = event3, output = data; i < path.length; i++) {
+    for (let i = 0, input2 = event4, output = data; i < path.length; i++) {
       if (i === path.length - 1) {
-        output[path[i]] = input[path[i]];
+        output[path[i]] = input2[path[i]];
         break;
       }
       output = output[path[i]] ??= {};
-      input = input[path[i]];
+      input2 = input2[path[i]];
     }
   }
   return data;
 };
-var syncedBooleanAttribute = (name) => {
+var syncedBooleanAttribute = (name2) => {
   return {
     added(node) {
-      node[name] = true;
+      node[name2] = true;
     },
     removed(node) {
-      node[name] = false;
+      node[name2] = false;
     }
   };
 };
-var syncedAttribute = (name) => {
+var syncedAttribute = (name2) => {
   return {
-    added(node, value) {
-      node[name] = value;
+    added(node, value2) {
+      node[name2] = value2;
     }
   };
 };
@@ -3567,13 +3954,13 @@ var virtualiseNode = (parent, node) => {
 };
 var INPUT_ELEMENTS = ["input", "select", "textarea"];
 var virtualiseInputEvents = (tag, node) => {
-  const value = node.value;
+  const value2 = node.value;
   const checked = node.checked;
   if (tag === "input" && node.type === "checkbox" && !checked) return;
   if (tag === "input" && node.type === "radio" && !checked) return;
-  if (node.type !== "checkbox" && node.type !== "radio" && !value) return;
+  if (node.type !== "checkbox" && node.type !== "radio" && !value2) return;
   queueMicrotask(() => {
-    node.value = value;
+    node.value = value2;
     node.checked = checked;
     node.dispatchEvent(new Event("input", { bubbles: true }));
     node.dispatchEvent(new Event("change", { bubbles: true }));
@@ -3598,33 +3985,33 @@ var virtualiseChildNodes = (node) => {
   return children;
 };
 var virtualiseAttributes = (node) => {
-  let index3 = node.attributes.length;
+  let index4 = node.attributes.length;
   let attributes = empty_list;
-  while (index3-- > 0) {
+  while (index4-- > 0) {
     attributes = new NonEmpty(
-      virtualiseAttribute(node.attributes[index3]),
+      virtualiseAttribute(node.attributes[index4]),
       attributes
     );
   }
   return attributes;
 };
 var virtualiseAttribute = (attr) => {
-  const name = attr.localName;
-  const value = attr.value;
-  return attribute2(name, value);
+  const name2 = attr.localName;
+  const value2 = attr.value;
+  return attribute2(name2, value2);
 };
 
 // build/dev/javascript/lustre/lustre/runtime/client/runtime.ffi.mjs
 var is_browser = () => !!document2;
 var is_reference_equal = (a2, b) => a2 === b;
 var Runtime = class {
-  constructor(root3, [model, effects], view3, update3) {
+  constructor(root3, [model, effects], view4, update4) {
     this.root = root3;
     this.#model = model;
-    this.#view = view3;
-    this.#update = update3;
-    this.#reconciler = new Reconciler(this.root, (event3, path, name) => {
-      const [events, msg] = handle(this.#events, path, name, event3);
+    this.#view = view4;
+    this.#update = update4;
+    this.#reconciler = new Reconciler(this.root, (event4, path, name2) => {
+      const [events, msg] = handle(this.#events, path, name2, event4);
       this.#events = events;
       if (msg.isOk()) {
         this.dispatch(msg[0], false);
@@ -3650,10 +4037,10 @@ var Runtime = class {
       this.#tick(effects);
     }
   }
-  emit(event3, data) {
+  emit(event4, data) {
     const target = this.root.host ?? this.root;
     target.dispatchEvent(
-      new CustomEvent(event3, {
+      new CustomEvent(event4, {
         detail: data,
         bubbles: true,
         composed: true
@@ -3675,7 +4062,7 @@ var Runtime = class {
   #shouldFlush = false;
   #actions = {
     dispatch: (msg, immediate2) => this.dispatch(msg, immediate2),
-    emit: (event3, data) => this.emit(event3, data),
+    emit: (event4, data) => this.emit(event4, data),
     select: () => {
     },
     root: () => this.root
@@ -3746,6 +4133,47 @@ function listAppend(a2, b) {
     return append(a2, b);
   }
 }
+var copiedStyleSheets = /* @__PURE__ */ new WeakMap();
+async function adoptStylesheets(shadowRoot) {
+  const pendingParentStylesheets = [];
+  for (const node of document2.querySelectorAll("link[rel=stylesheet], style")) {
+    if (node.sheet) continue;
+    pendingParentStylesheets.push(
+      new Promise((resolve, reject) => {
+        node.addEventListener("load", resolve);
+        node.addEventListener("error", reject);
+      })
+    );
+  }
+  await Promise.allSettled(pendingParentStylesheets);
+  if (!shadowRoot.host.isConnected) {
+    return [];
+  }
+  shadowRoot.adoptedStyleSheets = shadowRoot.host.getRootNode().adoptedStyleSheets;
+  const pending = [];
+  for (const sheet of document2.styleSheets) {
+    try {
+      shadowRoot.adoptedStyleSheets.push(sheet);
+    } catch {
+      try {
+        let copiedSheet = copiedStyleSheets.get(sheet);
+        if (!copiedSheet) {
+          copiedSheet = new CSSStyleSheet();
+          for (const rule of sheet.cssRules) {
+            copiedSheet.insertRule(rule.cssText, copiedSheet.cssRules.length);
+          }
+          copiedStyleSheets.set(sheet, copiedSheet);
+        }
+        shadowRoot.adoptedStyleSheets.push(copiedSheet);
+      } catch {
+        const node = sheet.ownerNode.cloneNode();
+        shadowRoot.prepend(node);
+        pending.push(node);
+      }
+    }
+  }
+  return pending;
+}
 
 // build/dev/javascript/lustre/lustre/vdom/events.mjs
 var Events = class extends CustomType {
@@ -3770,11 +4198,11 @@ function tick(events) {
     empty_list
   );
 }
-function do_remove_event(handlers, path, name) {
-  return remove(handlers, event(path, name));
+function do_remove_event(handlers, path, name2) {
+  return remove(handlers, event3(path, name2));
 }
-function remove_event(events, path, name) {
-  let handlers = do_remove_event(events.handlers, path, name);
+function remove_event(events, path, name2) {
+  let handlers = do_remove_event(events.handlers, path, name2);
   let _record = events;
   return new Events(
     handlers,
@@ -3788,15 +4216,15 @@ function remove_attributes(handlers, path, attributes) {
     handlers,
     (events, attribute3) => {
       if (attribute3 instanceof Event2) {
-        let name = attribute3.name;
-        return do_remove_event(events, path, name);
+        let name2 = attribute3.name;
+        return do_remove_event(events, path, name2);
       } else {
         return events;
       }
     }
   );
 }
-function handle(events, path, name, event3) {
+function handle(events, path, name2, event4) {
   let next_dispatched_paths = prepend(path, events.next_dispatched_paths);
   let _block;
   let _record = events;
@@ -3808,11 +4236,11 @@ function handle(events, path, name, event3) {
   let events$1 = _block;
   let $ = get(
     events$1.handlers,
-    path + separator_event + name
+    path + separator_event + name2
   );
   if ($.isOk()) {
     let handler = $[0];
-    return [events$1, run(event3, handler)];
+    return [events$1, run(event4, handler)];
   } else {
     return [events$1, new Error(toList([]))];
   }
@@ -3820,15 +4248,15 @@ function handle(events, path, name, event3) {
 function has_dispatched_events(events, path) {
   return matches(path, events.dispatched_paths);
 }
-function do_add_event(handlers, mapper, path, name, handler) {
+function do_add_event(handlers, mapper, path, name2, handler) {
   return insert3(
     handlers,
-    event(path, name),
+    event3(path, name2),
     map2(handler, identity2(mapper))
   );
 }
-function add_event(events, mapper, path, name, handler) {
-  let handlers = do_add_event(events.handlers, mapper, path, name, handler);
+function add_event(events, mapper, path, name2, handler) {
+  let handlers = do_add_event(events.handlers, mapper, path, name2, handler);
   let _record = events;
   return new Events(
     handlers,
@@ -3842,9 +4270,9 @@ function add_attributes(handlers, mapper, path, attributes) {
     handlers,
     (events, attribute3) => {
       if (attribute3 instanceof Event2) {
-        let name = attribute3.name;
+        let name2 = attribute3.name;
         let handler = attribute3.handler;
-        return do_add_event(events, mapper, path, name, handler);
+        return do_add_event(events, mapper, path, name2, handler);
       } else {
         return events;
       }
@@ -3963,8 +4391,8 @@ function do_add_child(handlers, mapper, parent, child_index, child) {
     return handlers;
   }
 }
-function add_child(events, mapper, parent, index3, child) {
-  let handlers = do_add_child(events.handlers, mapper, parent, index3, child);
+function add_child(events, mapper, parent, index4, child) {
+  let handlers = do_add_child(events.handlers, mapper, parent, index4, child);
   let _record = events;
   return new Events(
     handlers,
@@ -4086,6 +4514,15 @@ function ul(attrs, children) {
 function a(attrs, children) {
   return element2("a", attrs, children);
 }
+function button(attrs, children) {
+  return element2("button", attrs, children);
+}
+function input(attrs) {
+  return element2("input", attrs, empty_list);
+}
+function label(attrs, children) {
+  return element2("label", attrs, children);
+}
 
 // build/dev/javascript/lustre/lustre/runtime/server/runtime.mjs
 var EffectDispatchedMessage = class extends CustomType {
@@ -4095,13 +4532,127 @@ var EffectDispatchedMessage = class extends CustomType {
   }
 };
 var EffectEmitEvent = class extends CustomType {
-  constructor(name, data) {
+  constructor(name2, data) {
     super();
-    this.name = name;
+    this.name = name2;
     this.data = data;
   }
 };
 var SystemRequestedShutdown = class extends CustomType {
+};
+
+// build/dev/javascript/lustre/lustre/runtime/client/component.ffi.mjs
+var make_component = ({ init: init4, update: update4, view: view4, config }, name2) => {
+  if (!is_browser()) return new Error(new NotABrowser());
+  if (!name2.includes("-")) return new Error(new BadComponentName(name2));
+  if (customElements.get(name2)) {
+    return new Error(new ComponentAlreadyRegistered(name2));
+  }
+  const [model, effects] = init4(void 0);
+  const observedAttributes = config.attributes.entries().map(([name3]) => name3);
+  const component2 = class Component extends HTMLElement {
+    static get observedAttributes() {
+      return observedAttributes;
+    }
+    static formAssociated = config.is_form_associated;
+    #runtime;
+    #adoptedStyleNodes = [];
+    #shadowRoot;
+    constructor() {
+      super();
+      this.internals = this.attachInternals();
+      if (!this.internals.shadowRoot) {
+        this.#shadowRoot = this.attachShadow({
+          mode: config.open_shadow_root ? "open" : "closed"
+        });
+      } else {
+        this.#shadowRoot = this.internals.shadowRoot;
+      }
+      if (config.adopt_styles) {
+        this.#adoptStyleSheets();
+      }
+      this.#runtime = new Runtime(
+        this.#shadowRoot,
+        [model, effects],
+        view4,
+        update4
+      );
+    }
+    adoptedCallback() {
+      if (config.adopt_styles) {
+        this.#adoptStyleSheets();
+      }
+    }
+    attributeChangedCallback(name3, _, value2) {
+      const decoded = config.attributes.get(name3)(value2);
+      if (decoded.constructor === Ok) {
+        this.dispatch(decoded[0]);
+      }
+    }
+    formResetCallback() {
+      if (config.on_form_reset instanceof Some) {
+        this.dispatch(config.on_form_reset[0]);
+      }
+    }
+    formStateRestoreCallback(state, reason) {
+      switch (reason) {
+        case "restore":
+          if (config.on_form_restore instanceof Some) {
+            this.dispatch(config.on_form_restore[0](state));
+          }
+          break;
+        case "autocomplete":
+          if (config.on_form_populate instanceof Some) {
+            this.dispatch(config.on_form_autofill[0](state));
+          }
+          break;
+      }
+    }
+    send(message2) {
+      switch (message2.constructor) {
+        case EffectDispatchedMessage: {
+          this.dispatch(message2.message, false);
+          break;
+        }
+        case EffectEmitEvent: {
+          this.emit(message2.name, message2.data);
+          break;
+        }
+        case SystemRequestedShutdown:
+          break;
+      }
+    }
+    dispatch(msg, immediate2 = false) {
+      this.#runtime.dispatch(msg, immediate2);
+    }
+    emit(event4, data) {
+      this.#runtime.emit(event4, data);
+    }
+    async #adoptStyleSheets() {
+      while (this.#adoptedStyleNodes.length) {
+        this.#adoptedStyleNodes.pop().remove();
+        this.shadowRoot.firstChild.remove();
+      }
+      this.#adoptedStyleNodes = await adoptStylesheets(this.#shadowRoot);
+      this.#runtime.offset = this.#adoptedStyleNodes.length;
+    }
+  };
+  config.properties.forEach((decoder, name3) => {
+    Object.defineProperty(component2.prototype, name3, {
+      get() {
+        return this[`_${name3}`];
+      },
+      set(value2) {
+        this[`_${name3}`] = value2;
+        const decoded = run(value2, decoder);
+        if (decoded.constructor === Ok) {
+          this.dispatch(decoded[0]);
+        }
+      }
+    });
+  });
+  customElements.define(name2, component2);
+  return new Ok(void 0);
 };
 
 // build/dev/javascript/lustre/lustre/component.mjs
@@ -4119,7 +4670,7 @@ var Config2 = class extends CustomType {
   }
 };
 function new$6(options) {
-  let init3 = new Config2(
+  let init4 = new Config2(
     false,
     true,
     empty_dict(),
@@ -4131,7 +4682,7 @@ function new$6(options) {
   );
   return fold(
     options,
-    init3,
+    init4,
     (config, option) => {
       return option.apply(config);
     }
@@ -4140,15 +4691,15 @@ function new$6(options) {
 
 // build/dev/javascript/lustre/lustre/runtime/client/spa.ffi.mjs
 var Spa = class _Spa {
-  static start({ init: init3, update: update3, view: view3 }, selector, flags) {
+  static start({ init: init4, update: update4, view: view4 }, selector, flags) {
     if (!is_browser()) return new Error(new NotABrowser());
     const root3 = selector instanceof HTMLElement ? selector : document2.querySelector(selector);
     if (!root3) return new Error(new ElementNotFound(selector));
-    return new Ok(new _Spa(root3, init3(flags), update3, view3));
+    return new Ok(new _Spa(root3, init4(flags), update4, view4));
   }
   #runtime;
-  constructor(root3, [init3, effects], update3, view3) {
-    this.#runtime = new Runtime(root3, [init3, effects], view3, update3);
+  constructor(root3, [init4, effects], update4, view4) {
+    this.#runtime = new Runtime(root3, [init4, effects], view4, update4);
   }
   send(message2) {
     switch (message2.constructor) {
@@ -4167,20 +4718,32 @@ var Spa = class _Spa {
   dispatch(msg, immediate2) {
     this.#runtime.dispatch(msg, immediate2);
   }
-  emit(event3, data) {
-    this.#runtime.emit(event3, data);
+  emit(event4, data) {
+    this.#runtime.emit(event4, data);
   }
 };
 var start = Spa.start;
 
 // build/dev/javascript/lustre/lustre.mjs
 var App = class extends CustomType {
-  constructor(init3, update3, view3, config) {
+  constructor(init4, update4, view4, config) {
     super();
-    this.init = init3;
-    this.update = update3;
-    this.view = view3;
+    this.init = init4;
+    this.update = update4;
+    this.view = view4;
     this.config = config;
+  }
+};
+var BadComponentName = class extends CustomType {
+  constructor(name2) {
+    super();
+    this.name = name2;
+  }
+};
+var ComponentAlreadyRegistered = class extends CustomType {
+  constructor(name2) {
+    super();
+    this.name = name2;
   }
 };
 var ElementNotFound = class extends CustomType {
@@ -4191,8 +4754,11 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function application(init3, update3, view3) {
-  return new App(init3, update3, view3, new$6(empty_list));
+function component(init4, update4, view4, options) {
+  return new App(init4, update4, view4, new$6(options));
+}
+function application(init4, update4, view4) {
+  return new App(init4, update4, view4, new$6(empty_list));
 }
 function start3(app, selector, start_args) {
   return guard(
@@ -4212,6 +4778,11 @@ function route(path) {
   return attribute2("route", path);
 }
 
+// build/dev/javascript/gleam_stdlib/gleam/pair.mjs
+function new$7(first, second2) {
+  return [first, second2];
+}
+
 // build/dev/javascript/modem/modem.ffi.mjs
 var defaults = {
   handle_external_links: false,
@@ -4226,8 +4797,8 @@ var do_initial_uri = () => {
   }
 };
 var do_init = (dispatch, options = defaults) => {
-  document.addEventListener("click", (event3) => {
-    const a2 = find_anchor(event3.target);
+  document.addEventListener("click", (event4) => {
+    const a2 = find_anchor(event4.target);
     if (!a2) return;
     try {
       const url = new URL(a2.href);
@@ -4235,7 +4806,7 @@ var do_init = (dispatch, options = defaults) => {
       const is_external = url.host !== window.location.host;
       if (!options.handle_external_links && is_external) return;
       if (!options.handle_internal_links && !is_external) return;
-      event3.preventDefault();
+      event4.preventDefault();
       if (!is_external) {
         window.history.pushState({}, "", a2.href);
         window.requestAnimationFrame(() => {
@@ -4316,17 +4887,275 @@ function init(handler) {
   );
 }
 
-// build/dev/javascript/client/client.mjs
+// build/dev/javascript/lustre/lustre/event.mjs
+function emit(event4, data) {
+  return event2(event4, data);
+}
+function is_immediate_event(name2) {
+  if (name2 === "input") {
+    return true;
+  } else if (name2 === "change") {
+    return true;
+  } else if (name2 === "focus") {
+    return true;
+  } else if (name2 === "focusin") {
+    return true;
+  } else if (name2 === "focusout") {
+    return true;
+  } else if (name2 === "blur") {
+    return true;
+  } else if (name2 === "select") {
+    return true;
+  } else {
+    return false;
+  }
+}
+function on(name2, handler) {
+  return event(
+    name2,
+    handler,
+    empty_list,
+    false,
+    false,
+    is_immediate_event(name2),
+    0,
+    0
+  );
+}
+function on_click(msg) {
+  return on("click", success(msg));
+}
+function on_input(msg) {
+  return on(
+    "input",
+    subfield(
+      toList(["target", "value"]),
+      string2,
+      (value2) => {
+        return success(msg(value2));
+      }
+    )
+  );
+}
+
+// build/dev/javascript/client/formy.mjs
 var Model = class extends CustomType {
+  constructor(fields) {
+    super();
+    this.fields = fields;
+  }
+};
+var SingleField = class extends CustomType {
+  constructor(type_2, required2, value2, json2, update4) {
+    super();
+    this.type_ = type_2;
+    this.required = required2;
+    this.value = value2;
+    this.json = json2;
+    this.update = update4;
+  }
+};
+var UserClickedSave = class extends CustomType {
+};
+var UserUpdatedValue = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+function field_to_json(field2) {
+  let name2 = field2[0];
+  let field$1 = field2[1];
+  let _pipe = field$1.json;
+  let _pipe$1 = map3(
+    _pipe,
+    (_capture) => {
+      return new$7(name2, _capture);
+    }
+  );
+  return replace_error(_pipe$1, void 0);
+}
+function model_to_json(model) {
+  let _pipe = model.fields;
+  let _pipe$1 = map_to_list(_pipe);
+  let _pipe$2 = try_map(_pipe$1, field_to_json);
+  return map3(_pipe$2, object2);
+}
+function init2(_) {
+  return [
+    new Model(
+      (() => {
+        let _pipe = new_map();
+        let _pipe$1 = insert(
+          _pipe,
+          "date",
+          new SingleField(
+            "date",
+            true,
+            "",
+            (() => {
+              let _pipe$12 = null$();
+              return new Ok(_pipe$12);
+            })(),
+            (value2) => {
+              let _pipe$12 = value2;
+              let _pipe$2 = string3(_pipe$12);
+              return new Ok(_pipe$2);
+            }
+          )
+        );
+        return insert(
+          _pipe$1,
+          "customer_id",
+          new SingleField(
+            "number",
+            true,
+            "",
+            (() => {
+              let _pipe$2 = null$();
+              return new Ok(_pipe$2);
+            })(),
+            (value2) => {
+              let _pipe$2 = value2;
+              let _pipe$3 = parse_int(_pipe$2);
+              let _pipe$4 = map3(_pipe$3, int3);
+              return replace_error(_pipe$4, "Invalid ID");
+            }
+          )
+        );
+      })()
+    ),
+    none()
+  ];
+}
+var component_name = "formy";
+function element4(attributes) {
+  return element2(component_name, attributes, toList([]));
+}
+function view_input(field2) {
+  let name2 = field2[0];
+  let type_2 = field2[1].type_;
+  let required2 = field2[1].required;
+  let value2 = field2[1].value;
+  let json2 = field2[1].json;
+  return div(
+    toList([]),
+    toList([
+      label(
+        toList([for$(name2)]),
+        toList([text3(name2), text3(": ")])
+      ),
+      input(
+        toList([
+          type_(type_2),
+          id(name2),
+          name(name2),
+          on_input(
+            (_capture) => {
+              return new UserUpdatedValue(name2, _capture);
+            }
+          ),
+          value(value2),
+          required(required2)
+        ])
+      ),
+      (() => {
+        let _pipe = json2;
+        let _pipe$1 = replace2(_pipe, none2());
+        let _pipe$2 = map_error(
+          _pipe$1,
+          (msg) => {
+            return p(toList([]), toList([text3(msg)]));
+          }
+        );
+        return unwrap_both(_pipe$2);
+      })()
+    ])
+  );
+}
+function view2(model) {
+  return div(
+    toList([]),
+    toList([
+      fragment2(
+        (() => {
+          let _pipe = model.fields;
+          let _pipe$1 = map_to_list(_pipe);
+          return map(_pipe$1, view_input);
+        })()
+      ),
+      button(
+        toList([on_click(new UserClickedSave())]),
+        toList([text3("Save")])
+      )
+    ])
+  );
+}
+var event_name = "change";
+function update2(model, msg) {
+  if (msg instanceof UserClickedSave) {
+    let _pipe = model;
+    let _pipe$1 = model_to_json(_pipe);
+    let _pipe$2 = map3(
+      _pipe$1,
+      (_capture) => {
+        return emit(event_name, _capture);
+      }
+    );
+    let _pipe$3 = unwrap(_pipe$2, none());
+    return ((_capture) => {
+      return new$7(model, _capture);
+    })(_pipe$3);
+  } else {
+    let name2 = msg[0];
+    let value2 = msg[1];
+    let _pipe = model.fields;
+    let _pipe$1 = map_get(_pipe, name2);
+    let _pipe$2 = map3(
+      _pipe$1,
+      (field2) => {
+        return new Model(
+          (() => {
+            let _pipe$22 = model.fields;
+            return insert(
+              _pipe$22,
+              name2,
+              (() => {
+                let _record = field2;
+                return new SingleField(
+                  _record.type_,
+                  _record.required,
+                  value2,
+                  field2.update(value2),
+                  _record.update
+                );
+              })()
+            );
+          })()
+        );
+      }
+    );
+    let _pipe$3 = unwrap(_pipe$2, model);
+    return new$7(_pipe$3, none());
+  }
+}
+function register() {
+  let component2 = component(init2, update2, view2, toList([]));
+  return make_component(component2, component_name);
+}
+
+// build/dev/javascript/client/client.mjs
+var Model2 = class extends CustomType {
   constructor(route2) {
     super();
     this.route = route2;
   }
 };
 var Post = class extends CustomType {
-  constructor(id, title2, summary, text4) {
+  constructor(id2, title2, summary, text4) {
     super();
-    this.id = id;
+    this.id = id2;
     this.title = title2;
     this.summary = summary;
     this.text = text4;
@@ -4337,9 +5166,9 @@ var Index2 = class extends CustomType {
 var Posts = class extends CustomType {
 };
 var PostById = class extends CustomType {
-  constructor(id) {
+  constructor(id2) {
     super();
-    this.id = id;
+    this.id = id2;
   }
 };
 var About = class extends CustomType {
@@ -4396,7 +5225,7 @@ function href2(route2) {
   let url = _block;
   return href(url);
 }
-function init2(_) {
+function init3(_) {
   let _block;
   let $ = do_initial_uri();
   if ($.isOk()) {
@@ -4406,7 +5235,7 @@ function init2(_) {
     _block = new Index2();
   }
   let route2 = _block;
-  let model = new Model(route2);
+  let model = new Model2(route2);
   let effect = init(
     (uri) => {
       let _pipe = uri;
@@ -4416,10 +5245,10 @@ function init2(_) {
   );
   return [model, effect];
 }
-function update2(_, msg) {
+function update3(_, msg) {
   {
     let route2 = msg.route;
-    return [new Model(route2), none()];
+    return [new Model2(route2), none()];
   }
 }
 function view_header_link(target, current, text4) {
@@ -4503,9 +5332,10 @@ function view_index() {
         link(new Posts(), "read my ramblings ->")
       ])
     ),
+    element4(toList([])),
     element3(
       toList([route("/ws/counter")]),
-      toList([])
+      toList([element4(toList([]))])
     ),
     paragraph("If you like <3")
   ]);
@@ -4588,7 +5418,7 @@ function view_post(post_id) {
     ]);
   }
 }
-function view2(model) {
+function view3(model) {
   return div(
     toList([class$("mx-auto max-w-2xl px-32")]),
     toList([
@@ -4635,16 +5465,27 @@ function view2(model) {
   );
 }
 function main2() {
-  let app = application(init2, update2, view2);
-  let $ = start3(app, "#app", void 0);
+  let app = application(init3, update3, view3);
+  let $ = register();
   if (!$.isOk()) {
     throw makeError(
       "let_assert",
       "client",
-      18,
+      20,
       "main",
       "Pattern match failed, no pattern matched the value.",
       { value: $ }
+    );
+  }
+  let $1 = start3(app, "#app", void 0);
+  if (!$1.isOk()) {
+    throw makeError(
+      "let_assert",
+      "client",
+      21,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: $1 }
     );
   }
   return void 0;

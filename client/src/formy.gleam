@@ -1,13 +1,16 @@
 // IMPORTS ---------------------------------------------------------------------
 
+import gleam/dict
 import gleam/dynamic
 import gleam/dynamic/decode
-import gleam/function
 import gleam/int
 import gleam/json
-import gleam/option
+import gleam/list
+import gleam/pair
+import gleam/result
 import lustre
 import lustre/attribute.{type Attribute}
+import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
@@ -16,82 +19,86 @@ import lustre/event
 
 const component_name = "formy"
 
+const event_name = "change"
+
 //
 pub fn register() -> Result(Nil, lustre.Error) {
-  let component = lustre.simple(init, update, view)
+  let component = lustre.component(init, update, view, [])
   lustre.register(component, component_name)
 }
 
-pub fn element() -> Element(msg) {
-  element.element(component_name, [], [])
+pub fn element(attributes: List(Attribute(msg))) -> Element(msg) {
+  element.element(component_name, attributes, [])
 }
 
 pub fn on_change(handler: fn(dynamic.Dynamic) -> msg) -> Attribute(msg) {
-  event.on("change", {
+  event.on(event_name, {
     decode.at(["detail"], decode.dynamic) |> decode.map(handler)
   })
 }
 
-fn model_to_json(model: Model) -> json.Json {
-  let Model(date:, customer_id:) = model
-  json.object([field_to_json(date), field_to_json(customer_id)])
+fn model_to_json(model: Model) -> Result(json.Json, Nil) {
+  model.fields
+  |> dict.to_list()
+  |> list.try_map(field_to_json)
+  |> result.map(json.object)
 }
 
-fn field_to_json(field: Field(a)) -> #(String, json.Json) {
-  #(field.name, field.json(field.real))
+fn field_to_json(field: #(String, Field)) -> Result(#(String, json.Json), Nil) {
+  let #(name, field) = field
+
+  field.json
+  |> result.map(pair.new(name, _))
+  |> result.replace_error(Nil)
 }
 
 // MODEL -----------------------------------------------------------------------
 
 pub type Model {
-  Model(date: Field(String), customer_id: Field(option.Option(Int)))
+  Model(fields: dict.Dict(String, Field))
 }
 
-pub type Field(a) {
+pub type Field {
   SingleField(
     type_: String,
-    name: String,
     required: Bool,
-    msg: fn(String) -> Msg,
-    real: a,
-    error: String,
-    value: fn(a) -> String,
-    json: fn(a) -> json.Json,
+    value: String,
+    json: Result(json.Json, String),
+    update: fn(String) -> Result(json.Json, String),
   )
 }
 
-fn init(_) -> Model {
-  Model(
-    date: SingleField(
-      type_: "date",
-      name: "date",
-      required: True,
-      msg: UserUpdatedDate,
-      real: "",
-      error: "",
-      value: function.identity,
-      json: json.string,
+fn init(_) -> #(Model, effect.Effect(Msg)) {
+  #(
+    Model(
+      fields: dict.new()
+      |> dict.insert(
+        "date",
+        SingleField(
+          type_: "date",
+          required: True,
+          value: "",
+          json: json.null() |> Ok,
+          update: fn(value) { value |> json.string |> Ok },
+        ),
+      )
+      |> dict.insert(
+        "customer_id",
+        SingleField(
+          type_: "number",
+          required: True,
+          value: "",
+          json: json.null() |> Ok,
+          update: fn(value) {
+            value
+            |> int.parse
+            |> result.map(json.int)
+            |> result.replace_error("Invalid ID")
+          },
+        ),
+      ),
     ),
-    customer_id: SingleField(
-      type_: "number",
-      name: "customer_id",
-      required: True,
-      msg: UserUpdatedCustomerId,
-      real: option.None,
-      error: "",
-      value: fn(real) {
-        case real {
-          option.None -> ""
-          option.Some(real) -> int.to_string(real)
-        }
-      },
-      json: fn(real) {
-        case real {
-          option.None -> json.null()
-          option.Some(real) -> json.int(real)
-        }
-      },
-    ),
+    effect.none(),
   )
 }
 
@@ -99,28 +106,32 @@ fn init(_) -> Model {
 
 pub type Msg {
   UserClickedSave
-  UserUpdatedDate(String)
-  UserUpdatedCustomerId(String)
+  UserUpdatedValue(String, String)
 }
 
-fn update(model: Model, msg: Msg) -> Model {
+fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
     UserClickedSave -> {
-      event.emit("change", model_to_json(model))
       model
+      |> model_to_json
+      |> result.map(event.emit(event_name, _))
+      |> result.unwrap(effect.none())
+      |> pair.new(model, _)
     }
-    UserUpdatedDate(date) -> {
-      Model(..model, date: SingleField(..model.date, real: date))
-    }
-    UserUpdatedCustomerId(customer_id) -> {
-      let #(real, error) = case int.parse(customer_id) {
-        Ok(i) -> #(option.Some(i), "")
-        Error(Nil) -> #(option.None, "Invalid ID")
-      }
-      Model(
-        ..model,
-        customer_id: SingleField(..model.customer_id, real:, error:),
-      )
+    UserUpdatedValue(name, value) -> {
+      model.fields
+      |> dict.get(name)
+      |> result.map(fn(field) {
+        Model(
+          fields: model.fields
+          |> dict.insert(
+            name,
+            SingleField(..field, value:, json: field.update(value)),
+          ),
+        )
+      })
+      |> result.unwrap(model)
+      |> pair.new(effect.none())
     }
   }
 }
@@ -128,18 +139,18 @@ fn update(model: Model, msg: Msg) -> Model {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(date:, customer_id:) = model
-
   html.div([], [
-    view_input(date),
-    view_input(customer_id),
+    element.fragment(
+      model.fields
+      |> dict.to_list()
+      |> list.map(view_input),
+    ),
     html.button([event.on_click(UserClickedSave)], [html.text("Save")]),
   ])
 }
 
-fn view_input(field: Field(a)) -> Element(Msg) {
-  let SingleField(name:, type_:, msg:, value:, real:, required:, error:, ..) =
-    field
+fn view_input(field: #(String, Field)) -> Element(Msg) {
+  let #(name, SingleField(type_:, value:, required:, json:, ..)) = field
 
   html.div([], [
     html.label([attribute.for(name)], [html.text(name), html.text(": ")]),
@@ -147,13 +158,13 @@ fn view_input(field: Field(a)) -> Element(Msg) {
       attribute.type_(type_),
       attribute.id(name),
       attribute.name(name),
-      event.on_input(msg),
-      attribute.value(value(real)),
+      event.on_input(UserUpdatedValue(name, _)),
+      attribute.value(value),
       attribute.required(required),
     ]),
-    case error {
-      "" -> element.none()
-      _ -> html.p([], [html.text(error)])
-    },
+    json
+      |> result.replace(element.none())
+      |> result.map_error(fn(msg) { html.p([], [html.text(msg)]) })
+      |> result.unwrap_both,
   ])
 }
