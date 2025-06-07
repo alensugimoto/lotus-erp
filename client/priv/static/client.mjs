@@ -657,6 +657,22 @@ var Some = class extends CustomType {
 };
 var None = class extends CustomType {
 };
+function lazy_unwrap(option, default$) {
+  if (option instanceof Some) {
+    let x = option[0];
+    return x;
+  } else {
+    return default$();
+  }
+}
+function map(option, fun) {
+  if (option instanceof Some) {
+    let x = option[0];
+    return new Some(fun(x));
+  } else {
+    return new None();
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/dict.mjs
 var referenceMap = /* @__PURE__ */ new WeakMap();
@@ -1366,6 +1382,35 @@ var unequalDictSymbol = /* @__PURE__ */ Symbol();
 function insert(dict2, key, value2) {
   return map_insert(key, value2, dict2);
 }
+function fold_loop(loop$list, loop$initial, loop$fun) {
+  while (true) {
+    let list4 = loop$list;
+    let initial = loop$initial;
+    let fun = loop$fun;
+    if (list4.hasLength(0)) {
+      return initial;
+    } else {
+      let k = list4.head[0];
+      let v = list4.head[1];
+      let rest = list4.tail;
+      loop$list = rest;
+      loop$initial = fun(initial, k, v);
+      loop$fun = fun;
+    }
+  }
+}
+function fold(dict2, initial, fun) {
+  return fold_loop(map_to_list(dict2), initial, fun);
+}
+function do_map_values(f, dict2) {
+  let f$1 = (dict3, k, v) => {
+    return insert(dict3, k, f(k, v));
+  };
+  return fold(dict2, new_map(), f$1);
+}
+function map_values(dict2, fun) {
+  return do_map_values(fun, dict2);
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
 var Ascending = class extends CustomType {
@@ -1405,7 +1450,7 @@ function map_loop(loop$list, loop$fun, loop$acc) {
     }
   }
 }
-function map(list4, fun) {
+function map2(list4, fun) {
   return map_loop(list4, fun, toList([]));
 }
 function try_map_loop(loop$list, loop$fun, loop$acc) {
@@ -1451,7 +1496,7 @@ function append_loop(loop$first, loop$second) {
 function append(first, second2) {
   return append_loop(reverse(first), second2);
 }
-function fold(loop$list, loop$initial, loop$fun) {
+function fold2(loop$list, loop$initial, loop$fun) {
   while (true) {
     let list4 = loop$list;
     let initial = loop$initial;
@@ -1829,7 +1874,7 @@ function split2(x, substring) {
     let _pipe = x;
     let _pipe$1 = identity(_pipe);
     let _pipe$2 = split(_pipe$1, substring);
-    return map(_pipe$2, identity);
+    return map2(_pipe$2, identity);
   }
 }
 
@@ -1863,7 +1908,7 @@ function success(data) {
     return [data, toList([])];
   });
 }
-function map2(decoder, transformer) {
+function map3(decoder, transformer) {
   return new Decoder(
     (d) => {
       let $ = decoder.function(d);
@@ -1937,11 +1982,11 @@ function push_path(layer, path) {
     toList([
       (() => {
         let _pipe = int2;
-        return map2(_pipe, to_string);
+        return map3(_pipe, to_string);
       })()
     ])
   );
-  let path$1 = map(
+  let path$1 = map2(
     path,
     (key) => {
       let key$1 = identity(key);
@@ -1954,7 +1999,7 @@ function push_path(layer, path) {
       }
     }
   );
-  let errors = map(
+  let errors = map2(
     layer[1],
     (error) => {
       let _record = error;
@@ -2095,18 +2140,18 @@ var trim_end_regex = /* @__PURE__ */ new RegExp(`[${unicode_whitespaces}]*$`);
 function new_map() {
   return Dict.new();
 }
-function map_to_list(map4) {
-  return List.fromArray(map4.entries());
+function map_to_list(map5) {
+  return List.fromArray(map5.entries());
 }
-function map_get(map4, key) {
-  const value2 = map4.get(key, NOT_FOUND);
+function map_get(map5, key) {
+  const value2 = map5.get(key, NOT_FOUND);
   if (value2 === NOT_FOUND) {
     return new Error(Nil);
   }
   return new Ok(value2);
 }
-function map_insert(key, value2, map4) {
-  return map4.set(key, value2);
+function map_insert(key, value2, map5) {
+  return map5.set(key, value2);
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -2256,7 +2301,7 @@ function is_ok(result) {
     return true;
   }
 }
-function map3(result, fun) {
+function map4(result, fun) {
   if (result.isOk()) {
     let x = result[0];
     return new Ok(fun(x));
@@ -2315,9 +2360,6 @@ function object(entries) {
 function identity3(x) {
   return x;
 }
-function do_null() {
-  return null;
-}
 
 // build/dev/javascript/gleam_json/gleam/json.mjs
 function string3(input2) {
@@ -2328,9 +2370,6 @@ function bool(input2) {
 }
 function int3(input2) {
   return identity3(input2);
-}
-function null$() {
-  return do_null();
 }
 function object2(entries) {
   return object(entries);
@@ -2597,22 +2636,22 @@ function event2(name2, data) {
 function empty2() {
   return null;
 }
-function get(map4, key) {
-  const value2 = map4?.get(key);
+function get(map5, key) {
+  const value2 = map5?.get(key);
   if (value2 != null) {
     return new Ok(value2);
   } else {
     return new Error(void 0);
   }
 }
-function insert3(map4, key, value2) {
-  map4 ??= /* @__PURE__ */ new Map();
-  map4.set(key, value2);
-  return map4;
+function insert3(map5, key, value2) {
+  map5 ??= /* @__PURE__ */ new Map();
+  map5.set(key, value2);
+  return map5;
 }
-function remove(map4, key) {
-  map4?.delete(key);
-  return map4;
+function remove(map5, key) {
+  map5?.delete(key);
+  return map5;
 }
 
 // build/dev/javascript/lustre/lustre/vdom/path.mjs
@@ -4487,7 +4526,7 @@ function remove_event(events, path, name2) {
   );
 }
 function remove_attributes(handlers, path, attributes) {
-  return fold(
+  return fold2(
     attributes,
     handlers,
     (events, attribute3) => {
@@ -4528,7 +4567,7 @@ function do_add_event(handlers, mapper, path, name2, handler) {
   return insert3(
     handlers,
     event3(path, name2),
-    map2(handler, identity2(mapper))
+    map3(handler, identity2(mapper))
   );
 }
 function add_event(events, mapper, path, name2, handler) {
@@ -4541,7 +4580,7 @@ function add_event(events, mapper, path, name2, handler) {
   );
 }
 function add_attributes(handlers, mapper, path, attributes) {
-  return fold(
+  return fold2(
     attributes,
     handlers,
     (events, attribute3) => {
@@ -4962,7 +5001,7 @@ function new$6(options) {
     option_none,
     option_none
   );
-  return fold(
+  return fold2(
     options,
     init4,
     (config, option) => {
@@ -5265,9 +5304,9 @@ var UserUpdatedValue = class extends CustomType {
 };
 function field_to_json(field2) {
   let name2 = field2[0];
-  let field$1 = field2[1];
-  let _pipe = field$1.json;
-  let _pipe$1 = map3(
+  let json2 = field2[1][0];
+  let _pipe = json2;
+  let _pipe$1 = map4(
     _pipe,
     (_capture) => {
       return new$7(name2, _capture);
@@ -5275,11 +5314,10 @@ function field_to_json(field2) {
   );
   return replace_error(_pipe$1, void 0);
 }
-function model_to_json(model) {
-  let _pipe = model.fields;
-  let _pipe$1 = map_to_list(_pipe);
-  let _pipe$2 = try_map(_pipe$1, field_to_json);
-  return map3(_pipe$2, object2);
+function fields_to_json(fields) {
+  let _pipe = fields;
+  let _pipe$1 = try_map(_pipe, field_to_json);
+  return map4(_pipe$1, object2);
 }
 function init2(_) {
   return [
@@ -5293,10 +5331,7 @@ function init2(_) {
             "date",
             true,
             "",
-            (() => {
-              let _pipe$12 = null$();
-              return new Ok(_pipe$12);
-            })(),
+            new None(),
             (value2) => {
               let _pipe$12 = value2;
               let _pipe$2 = string3(_pipe$12);
@@ -5311,14 +5346,11 @@ function init2(_) {
             "text",
             true,
             "",
-            (() => {
-              let _pipe$2 = null$();
-              return new Ok(_pipe$2);
-            })(),
+            new None(),
             (value2) => {
               let _pipe$2 = value2;
               let _pipe$3 = parse_int(_pipe$2);
-              let _pipe$4 = map3(_pipe$3, int3);
+              let _pipe$4 = map4(_pipe$3, int3);
               return replace_error(_pipe$4, "Invalid ID");
             }
           )
@@ -5358,14 +5390,21 @@ function view_input(field2) {
       ),
       (() => {
         let _pipe = json2;
-        let _pipe$1 = replace2(_pipe, none2());
-        let _pipe$2 = map_error(
-          _pipe$1,
-          (msg) => {
-            return p(toList([]), toList([text3(msg)]));
+        let _pipe$1 = map(
+          _pipe,
+          (json3) => {
+            let _pipe$12 = json3;
+            let _pipe$2 = replace2(_pipe$12, none2());
+            let _pipe$3 = map_error(
+              _pipe$2,
+              (msg) => {
+                return p(toList([]), toList([text3(msg)]));
+              }
+            );
+            return unwrap_both(_pipe$3);
           }
         );
-        return unwrap_both(_pipe$2);
+        return lazy_unwrap(_pipe$1, none2);
       })()
     ])
   );
@@ -5378,7 +5417,7 @@ function view2(model) {
         (() => {
           let _pipe = model.fields;
           let _pipe$1 = map_to_list(_pipe);
-          return map(_pipe$1, view_input);
+          return map2(_pipe$1, view_input);
         })()
       ),
       button(
@@ -5391,25 +5430,66 @@ function view2(model) {
 var event_name = "change";
 function update2(model, msg) {
   if (msg instanceof UserClickedSave) {
-    let _pipe = model;
-    let _pipe$1 = model_to_json(_pipe);
-    let _pipe$2 = map3(
-      _pipe$1,
+    let _block;
+    let _pipe = model.fields;
+    _block = map_values(
+      _pipe,
+      (_, field2) => {
+        let _pipe$12 = field2.json;
+        let _pipe$22 = lazy_unwrap(
+          _pipe$12,
+          () => {
+            let _pipe$23 = field2.value;
+            return field2.update(_pipe$23);
+          }
+        );
+        return new$7(_pipe$22, field2);
+      }
+    );
+    let pairs = _block;
+    let model$1 = new Model(
+      (() => {
+        let _pipe$12 = pairs;
+        return map_values(
+          _pipe$12,
+          (_, pair) => {
+            let json2 = pair[0];
+            let field2 = pair[1];
+            let _record = field2;
+            return new SingleField(
+              _record.type_,
+              _record.required,
+              _record.value,
+              (() => {
+                let _pipe$22 = json2;
+                return new Some(_pipe$22);
+              })(),
+              _record.update
+            );
+          }
+        );
+      })()
+    );
+    let _block$1;
+    let _pipe$1 = pairs;
+    let _pipe$2 = map_to_list(_pipe$1);
+    let _pipe$3 = fields_to_json(_pipe$2);
+    let _pipe$4 = map4(
+      _pipe$3,
       (_capture) => {
         return emit(event_name, _capture);
       }
     );
-    let _pipe$3 = unwrap(_pipe$2, none());
-    return ((_capture) => {
-      return new$7(model, _capture);
-    })(_pipe$3);
+    _block$1 = unwrap(_pipe$4, none());
+    let effect = _block$1;
+    return [model$1, effect];
   } else {
     let name2 = msg[0];
     let value2 = msg[1];
-    echo([name2, value2], "src/client/formy.gleam", 129);
+    echo([name2, value2], "src/client/formy.gleam", 161);
     let _pipe = model.fields;
     let _pipe$1 = map_get(_pipe, name2);
-    let _pipe$2 = map3(
+    let _pipe$2 = map4(
       _pipe$1,
       (field2) => {
         return new Model(
@@ -5424,7 +5504,11 @@ function update2(model, msg) {
                   _record.type_,
                   _record.required,
                   value2,
-                  field2.update(value2),
+                  (() => {
+                    let _pipe$32 = value2;
+                    let _pipe$4 = field2.update(_pipe$32);
+                    return new Some(_pipe$4);
+                  })(),
                   _record.update
                 );
               })()
@@ -5487,11 +5571,11 @@ function echo$inspectString(str) {
   new_str += '"';
   return new_str;
 }
-function echo$inspectDict(map4) {
+function echo$inspectDict(map5) {
   let body = "dict.from_list([";
   let first = true;
   let key_value_pairs = [];
-  map4.forEach((value2, key) => {
+  map5.forEach((value2, key) => {
     key_value_pairs.push([key, value2]);
   });
   key_value_pairs.sort();
@@ -5806,7 +5890,7 @@ function view_posts() {
       return compare2(a2.id, b.id);
     }
   );
-  _block = map(
+  _block = map2(
     _pipe$1,
     (post) => {
       return article(

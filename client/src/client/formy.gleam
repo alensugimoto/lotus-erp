@@ -6,6 +6,7 @@ import gleam/dynamic/decode
 import gleam/int
 import gleam/json
 import gleam/list
+import gleam/option
 import gleam/pair
 import gleam/result
 import lustre
@@ -44,17 +45,20 @@ pub fn on_change(handler: fn(dynamic.Dynamic) -> msg) -> Attribute(msg) {
   |> server_component.include([detail])
 }
 
-fn model_to_json(model: Model) -> Result(json.Json, Nil) {
-  model.fields
-  |> dict.to_list()
+fn fields_to_json(
+  fields: List(#(String, #(Result(json.Json, String), Field))),
+) -> Result(json.Json, Nil) {
+  fields
   |> list.try_map(field_to_json)
   |> result.map(json.object)
 }
 
-fn field_to_json(field: #(String, Field)) -> Result(#(String, json.Json), Nil) {
-  let #(name, field) = field
+fn field_to_json(
+  field: #(String, #(Result(json.Json, String), Field)),
+) -> Result(#(String, json.Json), Nil) {
+  let #(name, #(json, _field)) = field
 
-  field.json
+  json
   |> result.map(pair.new(name, _))
   |> result.replace_error(Nil)
 }
@@ -70,7 +74,7 @@ pub type Field {
     type_: String,
     required: Bool,
     value: String,
-    json: Result(json.Json, String),
+    json: option.Option(Result(json.Json, String)),
     update: fn(String) -> Result(json.Json, String),
   )
 }
@@ -85,7 +89,7 @@ fn init(_) -> #(Model, effect.Effect(Msg)) {
           type_: "date",
           required: True,
           value: "",
-          json: json.null() |> Ok,
+          json: option.None,
           update: fn(value) { value |> json.string |> Ok },
         ),
       )
@@ -95,7 +99,7 @@ fn init(_) -> #(Model, effect.Effect(Msg)) {
           type_: "text",
           required: True,
           value: "",
-          json: json.null() |> Ok,
+          json: option.None,
           update: fn(value) {
             value
             |> int.parse
@@ -119,11 +123,39 @@ pub type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
     UserClickedSave -> {
-      model
-      |> model_to_json
-      |> result.map(event.emit(event_name, _))
-      |> result.unwrap(effect.none())
-      |> pair.new(model, _)
+      let pairs =
+        model.fields
+        |> dict.map_values(fn(_name, field) {
+          field.json
+          |> option.lazy_unwrap(fn() {
+            field.value
+            |> field.update
+          })
+          |> pair.new(field)
+        })
+
+      let model =
+        Model(
+          fields: pairs
+          |> dict.map_values(fn(_name, pair) {
+            let #(json, field) = pair
+
+            SingleField(
+              ..field,
+              json: json
+                |> option.Some,
+            )
+          }),
+        )
+
+      let effect =
+        pairs
+        |> dict.to_list
+        |> fields_to_json
+        |> result.map(event.emit(event_name, _))
+        |> result.unwrap(effect.none())
+
+      #(model, effect)
     }
     UserUpdatedValue(name, value) -> {
       echo #(name, value)
@@ -134,7 +166,13 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
           fields: model.fields
           |> dict.insert(
             name,
-            SingleField(..field, value:, json: field.update(value)),
+            SingleField(
+              ..field,
+              value:,
+              json: value
+                |> field.update
+                |> option.Some,
+            ),
           ),
         )
       })
@@ -171,8 +209,12 @@ fn view_input(field: #(String, Field)) -> Element(Msg) {
       attribute.required(required),
     ]),
     json
-      |> result.replace(element.none())
-      |> result.map_error(fn(msg) { html.p([], [html.text(msg)]) })
-      |> result.unwrap_both,
+      |> option.map(fn(json) {
+        json
+        |> result.replace(element.none())
+        |> result.map_error(fn(msg) { html.p([], [html.text(msg)]) })
+        |> result.unwrap_both
+      })
+      |> option.lazy_unwrap(element.none),
   ])
 }
