@@ -1,5 +1,6 @@
 import client/formy
-import gleam/dynamic
+import gleam/dict
+import gleam/json
 import lustre.{type App}
 import lustre/component
 import lustre/effect.{type Effect}
@@ -25,7 +26,7 @@ fn init(db) -> #(Model, Effect(Msg)) {
 // UPDATE ----------------------------------------------------------------------
 
 pub opaque type Msg {
-  UserClickedSave(dynamic.Dynamic)
+  UserClickedSave(dict.Dict(String, Result(json.Json, String)))
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {

@@ -36,12 +36,25 @@ pub fn element(attributes: List(Attribute(msg))) -> Element(msg) {
   element.element(component_name, attributes, [])
 }
 
-pub fn on_change(handler: fn(dynamic.Dynamic) -> msg) -> Attribute(msg) {
+pub fn on_change(
+  handler: fn(dict.Dict(String, Result(json.Json, String))) -> msg,
+) -> Attribute(msg) {
   let detail = "detail"
 
   event.on(event_name, {
-    decode.at([detail], decode.dynamic)
-    |> decode.map(handler)
+    decode.at([detail], decode.dict(decode.string, decode.dynamic))
+    |> decode.map(fn(dyn) {
+      let fields = get_fields()
+
+      dyn
+      |> dict.map_values(fn(name, value) {
+        fields
+        |> dict.get(name)
+        |> result.replace_error("Not found")
+        |> result.then(fn(field) { field_type_decode(field.type_, value) })
+      })
+      |> handler
+    })
   })
   |> server_component.include([detail])
 }
@@ -67,7 +80,7 @@ fn field_to_json(
 fn field_update(field: Field, value: String) -> Result(json.Json, String) {
   case field.required && string.is_empty(value) {
     True -> Error("Required")
-    False -> field.update(value)
+    False -> field_type_update(field.type_, value)
   }
 }
 
@@ -77,48 +90,83 @@ pub type Model {
   Model(fields: dict.Dict(String, Field))
 }
 
+pub type FieldType {
+  DateField
+  IntField
+}
+
 pub type Field {
   SingleField(
-    type_: String,
+    type_: FieldType,
     required: Bool,
     value: String,
     json: option.Option(Result(json.Json, String)),
-    update: fn(String) -> Result(json.Json, String),
+  )
+}
+
+fn field_type_to_string(field_type: FieldType) {
+  case field_type {
+    DateField -> "date"
+    IntField -> "text"
+  }
+}
+
+fn field_type_update(
+  field_type: FieldType,
+  value: String,
+) -> Result(json.Json, String) {
+  case field_type {
+    DateField -> {
+      value |> json.string |> Ok
+    }
+    IntField -> {
+      value
+      |> int.parse
+      |> result.map(json.int)
+      |> result.replace_error("Invalid ID")
+    }
+  }
+}
+
+fn field_type_decode(
+  field_type: FieldType,
+  value: dynamic.Dynamic,
+) -> Result(json.Json, String) {
+  case field_type {
+    DateField -> {
+      value
+      |> decode.run(decode.string)
+      |> result.replace_error("Invalid value")
+      |> result.then(fn(s) {
+        case string.is_empty(s) {
+          True -> Error("Missing value")
+          False -> Ok(json.string(s))
+        }
+      })
+    }
+    IntField -> {
+      value
+      |> decode.run(decode.int)
+      |> result.replace_error("Invalid value")
+      |> result.map(json.int)
+    }
+  }
+}
+
+fn get_fields() -> dict.Dict(String, Field) {
+  dict.new()
+  |> dict.insert(
+    "date",
+    SingleField(type_: DateField, required: True, value: "", json: option.None),
+  )
+  |> dict.insert(
+    "customer_id",
+    SingleField(type_: IntField, required: True, value: "", json: option.None),
   )
 }
 
 fn init(_) -> #(Model, effect.Effect(Msg)) {
-  #(
-    Model(
-      fields: dict.new()
-      |> dict.insert(
-        "date",
-        SingleField(
-          type_: "date",
-          required: True,
-          value: "",
-          json: option.None,
-          update: fn(value) { value |> json.string |> Ok },
-        ),
-      )
-      |> dict.insert(
-        "customer_id",
-        SingleField(
-          type_: "text",
-          required: True,
-          value: "",
-          json: option.None,
-          update: fn(value) {
-            value
-            |> int.parse
-            |> result.map(json.int)
-            |> result.replace_error("Invalid ID")
-          },
-        ),
-      ),
-    ),
-    effect.none(),
-  )
+  #(Model(fields: get_fields()), effect.none())
 }
 
 // UPDATE ----------------------------------------------------------------------
@@ -163,7 +211,6 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       #(model, effect)
     }
     UserUpdatedValue(name, value) -> {
-      echo #(name, value)
       model.fields
       |> dict.get(name)
       |> result.map(fn(field) {
@@ -201,12 +248,12 @@ fn view(model: Model) -> Element(Msg) {
 }
 
 fn view_input(field: #(String, Field)) -> Element(Msg) {
-  let #(name, SingleField(type_:, value:, required:, json:, ..)) = field
+  let #(name, SingleField(type_:, value:, required:, json:)) = field
 
   html.div([], [
     html.label([attribute.for(name)], [html.text(name), html.text(": ")]),
     html.input([
-      attribute.type_(type_),
+      attribute.type_(field_type_to_string(type_)),
       attribute.id(name),
       attribute.name(name),
       event.on_input(UserUpdatedValue(name, _)),
