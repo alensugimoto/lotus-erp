@@ -1,6 +1,6 @@
 // IMPORTS ---------------------------------------------------------------------
 
-import formy
+import client/formy
 import gleam/int
 import gleam/list
 import gleam/uri.{type Uri}

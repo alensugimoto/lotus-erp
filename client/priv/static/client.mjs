@@ -4938,7 +4938,7 @@ function on_input(msg) {
   );
 }
 
-// build/dev/javascript/client/formy.mjs
+// build/dev/javascript/client/client/formy.mjs
 var Model = class extends CustomType {
   constructor(fields) {
     super();
