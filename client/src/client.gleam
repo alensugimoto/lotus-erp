@@ -1,5 +1,6 @@
 // IMPORTS ---------------------------------------------------------------------
 
+import formy
 import gleam/int
 import gleam/list
 import gleam/uri.{type Uri}
@@ -15,6 +16,8 @@ import modem
 
 pub fn main() {
   let app = lustre.application(init, update, view)
+
+  let assert Ok(_) = formy.register()
   let assert Ok(_) = lustre.start(app, "#app", Nil)
 
   Nil
@@ -196,7 +199,9 @@ fn view_index() -> List(Element(msg)) {
       link(Posts, "read my ramblings ->"),
     ]),
     // TODO: get routes from server
-    server_component.element([server_component.route("/ws/counter")], []),
+    server_component.element([server_component.route("/ws/counter")], [
+      formy.element(),
+    ]),
     paragraph("If you like <3"),
   ]
 }
