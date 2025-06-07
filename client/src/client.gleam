@@ -199,9 +199,7 @@ fn view_index() -> List(Element(msg)) {
       link(Posts, "read my ramblings ->"),
     ]),
     // TODO: get routes from server
-    server_component.element([server_component.route("/ws/counter")], [
-      formy.element([]),
-    ]),
+    server_component.element([server_component.route("/ws/counter")], []),
     paragraph("If you like <3"),
   ]
 }

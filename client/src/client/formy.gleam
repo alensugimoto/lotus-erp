@@ -15,6 +15,7 @@ import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
 import lustre/event
+import lustre/server_component
 
 // MAIN ------------------------------------------------------------------------
 
@@ -34,9 +35,13 @@ pub fn element(attributes: List(Attribute(msg))) -> Element(msg) {
 }
 
 pub fn on_change(handler: fn(dynamic.Dynamic) -> msg) -> Attribute(msg) {
+  let detail = "detail"
+
   event.on(event_name, {
-    decode.at(["detail"], decode.dynamic) |> decode.map(handler)
+    decode.at([detail], decode.dynamic)
+    |> decode.map(handler)
   })
+  |> server_component.include([detail])
 }
 
 fn model_to_json(model: Model) -> Result(json.Json, Nil) {

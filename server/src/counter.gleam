@@ -25,12 +25,12 @@ fn init(db) -> #(Model, Effect(Msg)) {
 // UPDATE ----------------------------------------------------------------------
 
 pub opaque type Msg {
-  UserClickedSubmit(dynamic.Dynamic)
+  UserClickedSave(dynamic.Dynamic)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
-    UserClickedSubmit(data) -> {
+    UserClickedSave(data) -> {
       echo data
       #(model, effect.none())
     }
@@ -40,7 +40,5 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(_model: Model) -> Element(Msg) {
-  html.div([], [
-    component.default_slot([formy.on_change(UserClickedSubmit)], []),
-  ])
+  html.div([], [formy.element([formy.on_change(UserClickedSave)])])
 }

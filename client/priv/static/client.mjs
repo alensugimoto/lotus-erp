@@ -44,8 +44,8 @@ var List = class {
     return length3 - 1;
   }
 };
-function prepend(element5, tail) {
-  return new NonEmpty(element5, tail);
+function prepend(element4, tail) {
+  return new NonEmpty(element4, tail);
 }
 function toList(elements, tail) {
   return List.fromArray(elements, tail);
@@ -2408,12 +2408,12 @@ var Property = class extends CustomType {
   }
 };
 var Event2 = class extends CustomType {
-  constructor(kind, name2, handler, include, prevent_default, stop_propagation, immediate2, debounce, throttle) {
+  constructor(kind, name2, handler, include2, prevent_default, stop_propagation, immediate2, debounce, throttle) {
     super();
     this.kind = kind;
     this.name = name2;
     this.handler = handler;
-    this.include = include;
+    this.include = include2;
     this.prevent_default = prevent_default;
     this.stop_propagation = stop_propagation;
     this.immediate = immediate2;
@@ -2487,12 +2487,12 @@ function property(name2, value2) {
   return new Property(property_kind, name2, value2);
 }
 var event_kind = 2;
-function event(name2, handler, include, prevent_default, stop_propagation, immediate2, debounce, throttle) {
+function event(name2, handler, include2, prevent_default, stop_propagation, immediate2, debounce, throttle) {
   return new Event2(
     event_kind,
     name2,
     handler,
-    include,
+    include2,
     prevent_default,
     stop_propagation,
     immediate2,
@@ -3973,7 +3973,7 @@ var Reconciler = class {
       prevent_default: prevent,
       stop_propagation: stop,
       immediate: immediate2,
-      include,
+      include: include2,
       debounce: debounceDelay,
       throttle: throttleDelay
     } = attribute3;
@@ -4036,7 +4036,7 @@ var Reconciler = class {
             pathNode = parent;
           }
           path = path.slice(1);
-          const data = this.#useServerEvents ? createServerEvent(event4, include ?? []) : event4;
+          const data = this.#useServerEvents ? createServerEvent(event4, include2 ?? []) : event4;
           const throttle = throttles.get(type);
           if (throttle) {
             const now = Date.now();
@@ -4121,15 +4121,15 @@ var handleEvent = (event4) => {
   }
   handler(event4);
 };
-var createServerEvent = (event4, include = []) => {
+var createServerEvent = (event4, include2 = []) => {
   const data = {};
   if (event4.type === "input" || event4.type === "change") {
-    include.push("target.value");
+    include2.push("target.value");
   }
   if (event4.type === "submit") {
-    include.push("detail.formData");
+    include2.push("detail.formData");
   }
-  for (const property3 of include) {
+  for (const property3 of include2) {
     const path = property3.split(".");
     for (let i = 0, input2 = event4, output = data; i < path.length; i++) {
       if (i === path.length - 1) {
@@ -5329,9 +5329,6 @@ function init2(_) {
   ];
 }
 var component_name = "my-form";
-function element4(attributes) {
-  return element2(component_name, attributes, toList([]));
-}
 function view_input(field2) {
   let name2 = field2[0];
   let type_2 = field2[1].type_;
@@ -5409,7 +5406,7 @@ function update2(model, msg) {
   } else {
     let name2 = msg[0];
     let value2 = msg[1];
-    echo([name2, value2], "src/client/formy.gleam", 124);
+    echo([name2, value2], "src/client/formy.gleam", 129);
     let _pipe = model.fields;
     let _pipe$1 = map_get(_pipe, name2);
     let _pipe$2 = map3(
@@ -5775,7 +5772,7 @@ function view_index() {
     ),
     element3(
       toList([route("/ws/counter")]),
-      toList([element4(toList([]))])
+      toList([])
     ),
     paragraph("If you like <3")
   ]);
