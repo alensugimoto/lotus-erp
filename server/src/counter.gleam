@@ -1,6 +1,4 @@
 import client/formy
-import gleam/json
-import gleam/option
 import lustre.{type App}
 import lustre/component
 import lustre/effect.{type Effect}
@@ -17,41 +15,32 @@ pub fn component() -> App(pog.Connection, Model, Msg) {
 // MODEL -----------------------------------------------------------------------
 
 pub type Model {
-  Model(db: pog.Connection, msg: option.Option(String))
+  Model(db: pog.Connection)
 }
 
 fn init(db) -> #(Model, Effect(Msg)) {
-  #(Model(db:, msg: option.None), effect.none())
+  #(Model(db:), effect.none())
 }
 
 // UPDATE ----------------------------------------------------------------------
 
 pub opaque type Msg {
-  UserClickedSave(Result(json.Json, Nil))
+  UserClickedSave(formy.Form)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
-    UserClickedSave(data) -> {
-      #(
-        Model(..model, msg: case data {
-          Ok(json) -> option.Some("Ok: " <> json.to_string(json))
-          Error(Nil) -> option.Some("Error")
-        }),
-        effect.none(),
-      )
+    UserClickedSave(form) -> {
+      let formy.Form(date:, customer_id:) = form
+      echo date
+      echo customer_id
+      #(model, effect.none())
     }
   }
 }
 
 // VIEW ------------------------------------------------------------------------
 
-fn view(model: Model) -> Element(Msg) {
-  html.div([], [
-    formy.element([formy.on_change(UserClickedSave)]),
-    case model.msg {
-      option.None -> element.none()
-      option.Some(msg) -> html.text(msg)
-    },
-  ])
+fn view(_model: Model) -> Element(Msg) {
+  html.div([], [formy.element([formy.on_change(UserClickedSave)])])
 }

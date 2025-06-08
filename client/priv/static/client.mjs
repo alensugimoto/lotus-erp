@@ -1103,37 +1103,8 @@ var Dict = class _Dict {
 var unequalDictSymbol = /* @__PURE__ */ Symbol();
 
 // build/dev/javascript/gleam_stdlib/gleam/dict.mjs
-function insert(dict3, key, value2) {
-  return map_insert(key, value2, dict3);
-}
-function fold_loop(loop$list, loop$initial, loop$fun) {
-  while (true) {
-    let list4 = loop$list;
-    let initial = loop$initial;
-    let fun = loop$fun;
-    if (list4.hasLength(0)) {
-      return initial;
-    } else {
-      let k = list4.head[0];
-      let v = list4.head[1];
-      let rest = list4.tail;
-      loop$list = rest;
-      loop$initial = fun(initial, k, v);
-      loop$fun = fun;
-    }
-  }
-}
-function fold(dict3, initial, fun) {
-  return fold_loop(map_to_list(dict3), initial, fun);
-}
-function do_map_values(f, dict3) {
-  let f$1 = (dict4, k, v) => {
-    return insert(dict4, k, f(k, v));
-  };
-  return fold(dict3, new_map(), f$1);
-}
-function map_values(dict3, fun) {
-  return do_map_values(fun, dict3);
+function insert(dict2, key, value2) {
+  return map_insert(key, value2, dict2);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
@@ -1177,32 +1148,6 @@ function map_loop(loop$list, loop$fun, loop$acc) {
 function map2(list4, fun) {
   return map_loop(list4, fun, toList([]));
 }
-function try_map_loop(loop$list, loop$fun, loop$acc) {
-  while (true) {
-    let list4 = loop$list;
-    let fun = loop$fun;
-    let acc = loop$acc;
-    if (list4.hasLength(0)) {
-      return new Ok(reverse(acc));
-    } else {
-      let first$1 = list4.head;
-      let rest$1 = list4.tail;
-      let $ = fun(first$1);
-      if ($.isOk()) {
-        let first$2 = $[0];
-        loop$list = rest$1;
-        loop$fun = fun;
-        loop$acc = prepend(first$2, acc);
-      } else {
-        let error = $[0];
-        return new Error(error);
-      }
-    }
-  }
-}
-function try_map(list4, fun) {
-  return try_map_loop(list4, fun, toList([]));
-}
 function append_loop(loop$first, loop$second) {
   while (true) {
     let first = loop$first;
@@ -1220,7 +1165,7 @@ function append_loop(loop$first, loop$second) {
 function append(first, second2) {
   return append_loop(reverse(first), second2);
 }
-function fold2(loop$list, loop$initial, loop$fun) {
+function fold(loop$list, loop$initial, loop$fun) {
   while (true) {
     let list4 = loop$list;
     let initial = loop$initial;
@@ -1867,9 +1812,6 @@ var trim_end_regex = /* @__PURE__ */ new RegExp(`[${unicode_whitespaces}]*$`);
 function new_map() {
   return Dict.new();
 }
-function map_to_list(map5) {
-  return List.fromArray(map5.entries());
-}
 function map_get(map5, key) {
   const value2 = map5.get(key, NOT_FOUND);
   if (value2 === NOT_FOUND) {
@@ -2046,12 +1988,21 @@ function map_error(result, fun) {
     return new Error(fun(error));
   }
 }
-function unwrap(result, default$) {
+function try$(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return fun(x);
+  } else {
+    let e = result[0];
+    return new Error(e);
+  }
+}
+function lazy_unwrap2(result, default$) {
   if (result.isOk()) {
     let v = result[0];
     return v;
   } else {
-    return default$;
+    return default$();
   }
 }
 function unwrap_both(result) {
@@ -2061,14 +2012,6 @@ function unwrap_both(result) {
   } else {
     let a2 = result[0];
     return a2;
-  }
-}
-function replace2(result, value2) {
-  if (result.isOk()) {
-    return new Ok(value2);
-  } else {
-    let error = result[0];
-    return new Error(error);
   }
 }
 function replace_error(result, error) {
@@ -2104,9 +2047,9 @@ function object2(entries) {
 
 // build/dev/javascript/gleam_stdlib/gleam/set.mjs
 var Set2 = class extends CustomType {
-  constructor(dict3) {
+  constructor(dict2) {
     super();
-    this.dict = dict3;
+    this.dict = dict2;
   }
 };
 function new$() {
@@ -2813,7 +2756,7 @@ function remove_key(key, count) {
   return new RemoveKey(remove_key_kind, key, count);
 }
 var replace_kind = 5;
-function replace3(from2, count, with$) {
+function replace2(from2, count, with$) {
   return new Replace(replace_kind, from2, count, with$);
 }
 var insert_kind = 6;
@@ -3239,7 +3182,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       } else {
         let prev_count = advance(prev);
         let next_count = advance(next);
-        let change = replace3(node_index - moved_offset, prev_count, next);
+        let change = replace2(node_index - moved_offset, prev_count, next);
         let _block;
         let _pipe = events;
         let _pipe$1 = remove_child(_pipe, path, node_index, prev);
@@ -3492,7 +3435,7 @@ function do_diff(loop$old, loop$old_keyed, loop$new, loop$new_keyed, loop$moved,
       let new_remaining = new$8.tail;
       let prev_count = advance(prev);
       let next_count = advance(next);
-      let change = replace3(node_index - moved_offset, prev_count, next);
+      let change = replace2(node_index - moved_offset, prev_count, next);
       let _block;
       let _pipe = events;
       let _pipe$1 = remove_child(_pipe, path, node_index, prev);
@@ -4253,7 +4196,7 @@ function remove_event(events, path, name2) {
   );
 }
 function remove_attributes(handlers, path, attributes) {
-  return fold2(
+  return fold(
     attributes,
     handlers,
     (events, attribute3) => {
@@ -4307,7 +4250,7 @@ function add_event(events, mapper, path, name2, handler) {
   );
 }
 function add_attributes(handlers, mapper, path, attributes) {
-  return fold2(
+  return fold(
     attributes,
     handlers,
     (events, attribute3) => {
@@ -4728,7 +4671,7 @@ function new$6(options) {
     option_none,
     option_none
   );
-  return fold2(
+  return fold(
     options,
     init4,
     (config, option) => {
@@ -5005,100 +4948,181 @@ function on_input(msg) {
 
 // build/dev/javascript/client/client/formy.mjs
 var Model = class extends CustomType {
-  constructor(fields) {
+  constructor(date, customer_id) {
     super();
-    this.fields = fields;
+    this.date = date;
+    this.customer_id = customer_id;
   }
 };
-var DateField = class extends CustomType {
-};
-var IntField = class extends CustomType {
-};
 var SingleField = class extends CustomType {
-  constructor(type_2, required2, value2, json2) {
+  constructor(name2, value2, type_2, required2, on_input2, parsed_value, parse3) {
     super();
+    this.name = name2;
+    this.value = value2;
     this.type_ = type_2;
     this.required = required2;
-    this.value = value2;
-    this.json = json2;
+    this.on_input = on_input2;
+    this.parsed_value = parsed_value;
+    this.parse = parse3;
   }
 };
 var UserClickedSave = class extends CustomType {
 };
-var UserUpdatedValue = class extends CustomType {
-  constructor(x0, x1) {
+var UserUpdatedDate = class extends CustomType {
+  constructor(x0) {
     super();
     this[0] = x0;
-    this[1] = x1;
   }
 };
-function field_to_json(field2) {
-  let name2 = field2[0];
-  let json2 = field2[1][0];
-  let _pipe = json2;
-  let _pipe$1 = map4(
-    _pipe,
-    (_capture) => {
-      return new$7(name2, _capture);
+var UserUpdatedCustomerId = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+function get_parsed_value(field2) {
+  let $ = field2.parsed_value;
+  if ($ instanceof None) {
+    let _pipe = field2.value;
+    return field2.parse(_pipe);
+  } else {
+    let parsed_value = $[0];
+    return parsed_value;
+  }
+}
+function update_values(model) {
+  let date = model.date;
+  let customer_id = model.customer_id;
+  return new Model(
+    (() => {
+      let _record = date;
+      return new SingleField(
+        _record.name,
+        _record.value,
+        _record.type_,
+        _record.required,
+        _record.on_input,
+        (() => {
+          let _pipe = date;
+          let _pipe$1 = get_parsed_value(_pipe);
+          return new Some(_pipe$1);
+        })(),
+        _record.parse
+      );
+    })(),
+    (() => {
+      let _record = customer_id;
+      return new SingleField(
+        _record.name,
+        _record.value,
+        _record.type_,
+        _record.required,
+        _record.on_input,
+        (() => {
+          let _pipe = customer_id;
+          let _pipe$1 = get_parsed_value(_pipe);
+          return new Some(_pipe$1);
+        })(),
+        _record.parse
+      );
+    })()
+  );
+}
+function encode_model(model) {
+  let date = model.date;
+  let customer_id = model.customer_id;
+  return try$(
+    get_parsed_value(date),
+    (parsed_date) => {
+      return try$(
+        get_parsed_value(customer_id),
+        (parsed_customer_id) => {
+          let _pipe = toList([
+            [date.name, string3(parsed_date)],
+            [customer_id.name, int3(parsed_customer_id)]
+          ]);
+          let _pipe$1 = object2(_pipe);
+          return new Ok(_pipe$1);
+        }
+      );
     }
   );
-  return replace_error(_pipe$1, void 0);
 }
-function fields_to_json(fields) {
-  let _pipe = fields;
-  let _pipe$1 = try_map(_pipe, field_to_json);
-  return map4(_pipe$1, object2);
-}
-function field_type_to_string(field_type) {
-  if (field_type instanceof DateField) {
-    return "date";
-  } else {
-    return "text";
-  }
-}
-function field_type_update(field_type, value2) {
-  if (field_type instanceof DateField) {
-    let _pipe = value2;
-    let _pipe$1 = string3(_pipe);
-    return new Ok(_pipe$1);
-  } else {
-    let _pipe = value2;
-    let _pipe$1 = parse_int(_pipe);
-    let _pipe$2 = map4(_pipe$1, int3);
-    return replace_error(_pipe$2, "Invalid ID");
-  }
-}
-function field_update(field2, value2) {
-  let $ = field2.required && is_empty(value2);
-  if ($) {
-    return new Error("Required");
-  } else {
-    return field_type_update(field2.type_, value2);
-  }
-}
-function get_fields() {
-  let _pipe = new_map();
-  let _pipe$1 = insert(
-    _pipe,
-    "date",
-    new SingleField(new DateField(), true, "", new None())
-  );
-  return insert(
-    _pipe$1,
-    "customer_id",
-    new SingleField(new IntField(), true, "", new None())
+function update_value(value2, field2) {
+  let _record = field2;
+  return new SingleField(
+    _record.name,
+    value2,
+    _record.type_,
+    _record.required,
+    _record.on_input,
+    (() => {
+      let _pipe = value2;
+      let _pipe$1 = field2.parse(_pipe);
+      return new Some(_pipe$1);
+    })(),
+    _record.parse
   );
 }
 function init2(_) {
-  return [new Model(get_fields()), none()];
+  return [
+    new Model(
+      new SingleField(
+        "date",
+        "",
+        "date",
+        true,
+        (var0) => {
+          return new UserUpdatedDate(var0);
+        },
+        new None(),
+        (value2) => {
+          let $ = (() => {
+            let _pipe = value2;
+            return is_empty(_pipe);
+          })();
+          if ($) {
+            return new Error("Required");
+          } else {
+            return new Ok(value2);
+          }
+        }
+      ),
+      new SingleField(
+        "customer_id",
+        "",
+        "text",
+        true,
+        (var0) => {
+          return new UserUpdatedCustomerId(var0);
+        },
+        new None(),
+        (value2) => {
+          let $ = (() => {
+            let _pipe = value2;
+            return is_empty(_pipe);
+          })();
+          if ($) {
+            return new Error("Required");
+          } else {
+            let _pipe = value2;
+            let _pipe$1 = parse_int(_pipe);
+            return replace_error(_pipe$1, "Invalid ID");
+          }
+        }
+      )
+    ),
+    none()
+  ];
 }
 var component_name = "my-form";
 function view_input(field2) {
-  let name2 = field2[0];
-  let type_2 = field2[1].type_;
-  let required2 = field2[1].required;
-  let value2 = field2[1].value;
-  let json2 = field2[1].json;
+  let name2 = field2.name;
+  let value2 = field2.value;
+  let type_2 = field2.type_;
+  let required2 = field2.required;
+  let on_input2 = field2.on_input;
+  let parsed_value = field2.parsed_value;
   return div(
     toList([]),
     toList([
@@ -5108,25 +5132,26 @@ function view_input(field2) {
       ),
       input(
         toList([
-          type_(field_type_to_string(type_2)),
+          type_(type_2),
           id(name2),
           name(name2),
-          on_input(
-            (_capture) => {
-              return new UserUpdatedValue(name2, _capture);
-            }
-          ),
+          on_input(on_input2),
           value(value2),
           required(required2)
         ])
       ),
       (() => {
-        let _pipe = json2;
+        let _pipe = parsed_value;
         let _pipe$1 = map(
           _pipe,
-          (json3) => {
-            let _pipe$12 = json3;
-            let _pipe$2 = replace2(_pipe$12, none2());
+          (parsed_value2) => {
+            let _pipe$12 = parsed_value2;
+            let _pipe$2 = map4(
+              _pipe$12,
+              (_) => {
+                return none2();
+              }
+            );
             let _pipe$3 = map_error(
               _pipe$2,
               (msg) => {
@@ -5142,16 +5167,13 @@ function view_input(field2) {
   );
 }
 function view2(model) {
+  let date = model.date;
+  let customer_id = model.customer_id;
   return div(
     toList([]),
     toList([
-      fragment2(
-        (() => {
-          let _pipe = model.fields;
-          let _pipe$1 = map_to_list(_pipe);
-          return map2(_pipe$1, view_input);
-        })()
-      ),
+      view_input(date),
+      view_input(customer_id),
       button(
         toList([on_click(new UserClickedSave())]),
         toList([text3("Save")])
@@ -5163,92 +5185,39 @@ var event_name = "change";
 function update2(model, msg) {
   if (msg instanceof UserClickedSave) {
     let _block;
-    let _pipe = model.fields;
-    _block = map_values(
-      _pipe,
-      (_, field2) => {
-        let _pipe$12 = field2.json;
-        let _pipe$22 = lazy_unwrap(
-          _pipe$12,
-          () => {
-            return field_update(field2, field2.value);
-          }
-        );
-        return new$7(_pipe$22, field2);
-      }
-    );
-    let pairs = _block;
-    let model$1 = new Model(
-      (() => {
-        let _pipe$12 = pairs;
-        return map_values(
-          _pipe$12,
-          (_, pair) => {
-            let json2 = pair[0];
-            let field2 = pair[1];
-            let _record = field2;
-            return new SingleField(
-              _record.type_,
-              _record.required,
-              _record.value,
-              (() => {
-                let _pipe$22 = json2;
-                return new Some(_pipe$22);
-              })()
-            );
-          }
-        );
-      })()
-    );
+    let _pipe = model;
+    _block = update_values(_pipe);
+    let model$1 = _block;
     let _block$1;
-    let _pipe$1 = pairs;
-    let _pipe$2 = map_to_list(_pipe$1);
-    let _pipe$3 = fields_to_json(_pipe$2);
-    let _pipe$4 = map4(
-      _pipe$3,
+    let _pipe$1 = model$1;
+    let _pipe$2 = encode_model(_pipe$1);
+    let _pipe$3 = map4(
+      _pipe$2,
       (_capture) => {
         return emit(event_name, _capture);
       }
     );
-    _block$1 = unwrap(_pipe$4, none());
+    _block$1 = lazy_unwrap2(_pipe$3, none);
     let effect = _block$1;
     return [model$1, effect];
+  } else if (msg instanceof UserUpdatedDate) {
+    let value2 = msg[0];
+    let _pipe = value2;
+    let _pipe$1 = update_value(_pipe, model.date);
+    let _pipe$2 = ((field2) => {
+      let _record = model;
+      return new Model(field2, _record.customer_id);
+    })(_pipe$1);
+    return new$7(_pipe$2, none());
   } else {
-    let name2 = msg[0];
-    let value2 = msg[1];
-    let _pipe = model.fields;
-    let _pipe$1 = map_get(_pipe, name2);
-    let _pipe$2 = map4(
-      _pipe$1,
-      (field2) => {
-        return new Model(
-          (() => {
-            let _pipe$22 = model.fields;
-            return insert(
-              _pipe$22,
-              name2,
-              (() => {
-                let _record = field2;
-                return new SingleField(
-                  _record.type_,
-                  _record.required,
-                  value2,
-                  (() => {
-                    let _pipe$32 = value2;
-                    let _pipe$4 = ((_capture) => {
-                      return field_update(field2, _capture);
-                    })(_pipe$32);
-                    return new Some(_pipe$4);
-                  })()
-                );
-              })()
-            );
-          })()
-        );
-      }
-    );
-    let _pipe$3 = unwrap(_pipe$2, model);
-    return new$7(_pipe$3, none());
+    let value2 = msg[0];
+    let _pipe = value2;
+    let _pipe$1 = update_value(_pipe, model.customer_id);
+    let _pipe$2 = ((field2) => {
+      let _record = model;
+      return new Model(_record.date, field2);
+    })(_pipe$1);
+    return new$7(_pipe$2, none());
   }
 }
 function register() {
