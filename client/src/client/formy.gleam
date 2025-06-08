@@ -36,9 +36,7 @@ pub fn element(attributes: List(Attribute(msg))) -> Element(msg) {
   element.element(component_name, attributes, [])
 }
 
-pub fn on_change(
-  handler: fn(dict.Dict(String, Result(json.Json, String))) -> msg,
-) -> Attribute(msg) {
+pub fn on_change(handler: fn(Result(json.Json, Nil)) -> msg) -> Attribute(msg) {
   let detail = "detail"
 
   event.on(event_name, {
@@ -47,12 +45,16 @@ pub fn on_change(
       let fields = get_fields()
 
       dyn
-      |> dict.map_values(fn(name, value) {
+      |> dict.to_list
+      |> list.try_map(fn(pair) {
+        let #(name, value) = pair
+
         fields
         |> dict.get(name)
-        |> result.replace_error("Not found")
         |> result.then(fn(field) { field_type_decode(field.type_, value) })
+        |> result.map(pair.new(name, _))
       })
+      |> result.map(json.object)
       |> handler
     })
   })
@@ -131,15 +133,15 @@ fn field_type_update(
 fn field_type_decode(
   field_type: FieldType,
   value: dynamic.Dynamic,
-) -> Result(json.Json, String) {
+) -> Result(json.Json, Nil) {
   case field_type {
     DateField -> {
       value
       |> decode.run(decode.string)
-      |> result.replace_error("Invalid value")
+      |> result.replace_error(Nil)
       |> result.then(fn(s) {
         case string.is_empty(s) {
-          True -> Error("Missing value")
+          True -> Error(Nil)
           False -> Ok(json.string(s))
         }
       })
@@ -147,7 +149,7 @@ fn field_type_decode(
     IntField -> {
       value
       |> decode.run(decode.int)
-      |> result.replace_error("Invalid value")
+      |> result.replace_error(Nil)
       |> result.map(json.int)
     }
   }

@@ -26,7 +26,7 @@ fn init(db) -> #(Model, Effect(Msg)) {
 // UPDATE ----------------------------------------------------------------------
 
 pub opaque type Msg {
-  UserClickedSave(dict.Dict(String, Result(json.Json, String)))
+  UserClickedSave(Result(json.Json, Nil))
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
