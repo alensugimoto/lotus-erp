@@ -1,10 +1,11 @@
 // IMPORTS ---------------------------------------------------------------------
 
+import gleam/dict
 import gleam/dynamic/decode
 import gleam/int
 import gleam/json
+import gleam/list
 import gleam/option
-import gleam/pair
 import gleam/result
 import gleam/string
 import lustre
@@ -13,6 +14,7 @@ import lustre/component
 import lustre/effect
 import lustre/element.{type Element}
 import lustre/element/html
+import lustre/element/keyed
 import lustre/event
 import lustre/server_component
 
@@ -46,115 +48,136 @@ pub fn on_change(handler: fn(Form) -> msg) -> Attribute(msg) {
 // MODEL -----------------------------------------------------------------------
 
 pub type Model {
-  Model(date: Field(String), customer_id: Field(Int))
+  Model(
+    date: Field(String),
+    customer_id: Field(Int),
+    line_items: dict.Dict(Int, LineItemForm),
+  )
+}
+
+pub type LineItemForm {
+  LineItemForm(item_id: Field(Int), quantity: Field(Int))
 }
 
 pub type Form {
-  Form(date: String, customer_id: Int)
+  Form(date: String, customer_id: Int, line_items: List(LineItem))
+}
+
+fn encode_form(form: Form) -> json.Json {
+  let Form(date:, customer_id:, line_items:) = form
+  json.object([
+    #("date", json.string(date)),
+    #("customer_id", json.int(customer_id)),
+    #("line_items", json.array(line_items, encode_line_item)),
+  ])
+}
+
+pub type LineItem {
+  LineItem(item_id: Int, quantity: Int)
+}
+
+fn encode_line_item(line_item: LineItem) -> json.Json {
+  let LineItem(item_id:, quantity:) = line_item
+  json.object([
+    #("item_id", json.int(item_id)),
+    #("quantity", json.int(quantity)),
+  ])
+}
+
+fn line_item_decoder() -> decode.Decoder(LineItem) {
+  use item_id <- decode.field("item_id", decode.int)
+  use quantity <- decode.field("quantity", decode.int)
+  decode.success(LineItem(item_id:, quantity:))
 }
 
 fn form_decoder() -> decode.Decoder(Form) {
   use date <- decode.field("date", decode.string)
   use customer_id <- decode.field("customer_id", decode.int)
-  decode.success(Form(date:, customer_id:))
+  use line_items <- decode.field("line_items", decode.list(line_item_decoder()))
+  decode.success(Form(date:, customer_id:, line_items:))
 }
 
-fn get_parsed_value(field: Field(a)) -> Result(a, String) {
+fn get_parsed_value(
+  field: Field(a),
+  parse: fn(String) -> Result(a, String),
+) -> Result(a, String) {
   case field.parsed_value {
-    option.None -> field.value |> field.parse
+    option.None -> field.value |> parse
     option.Some(parsed_value) -> parsed_value
   }
 }
 
 fn update_values(model: Model) -> Model {
-  let Model(date:, customer_id:) = model
+  let Model(date:, customer_id:, line_items:) = model
 
   Model(
-    date: SingleField(
+    date: Field(
       ..date,
       parsed_value: date
-        |> get_parsed_value
+        |> get_parsed_value(date_parse)
         |> option.Some,
     ),
-    customer_id: SingleField(
+    customer_id: Field(
       ..customer_id,
       parsed_value: customer_id
-        |> get_parsed_value
+        |> get_parsed_value(customer_id_parse)
         |> option.Some,
     ),
+    line_items: line_items
+      |> dict.map_values(fn(_, line_item) {
+        let LineItemForm(item_id:, quantity:) = line_item
+
+        LineItemForm(
+          item_id: Field(
+            ..item_id,
+            parsed_value: item_id
+              |> get_parsed_value(item_id_parse)
+              |> option.Some,
+          ),
+          quantity: Field(
+            ..quantity,
+            parsed_value: quantity
+              |> get_parsed_value(quantity_parse)
+              |> option.Some,
+          ),
+        )
+      }),
   )
 }
 
-fn encode_model(model: Model) -> Result(json.Json, String) {
-  let Model(date:, customer_id:) = model
-
-  use parsed_date <- result.try(get_parsed_value(date))
-  use parsed_customer_id <- result.try(get_parsed_value(customer_id))
-
-  [
-    #(date.name, json.string(parsed_date)),
-    #(customer_id.name, json.int(parsed_customer_id)),
-  ]
-  |> json.object
-  |> Ok
+fn model_to_form(model: Model) -> Result(Form, String) {
+  let Model(date:, customer_id:, line_items:) = model
+  use date <- result.try(
+    date
+    |> get_parsed_value(date_parse),
+  )
+  use customer_id <- result.try(
+    customer_id
+    |> get_parsed_value(customer_id_parse),
+  )
+  use line_items <- result.try(
+    line_items
+    |> dict.to_list
+    |> list.try_map(fn(pair) {
+      let #(_, LineItemForm(item_id:, quantity:)) = pair
+      use item_id <- result.try(item_id |> get_parsed_value(item_id_parse))
+      use quantity <- result.try(quantity |> get_parsed_value(quantity_parse))
+      LineItem(item_id:, quantity:) |> Ok
+    }),
+  )
+  Form(date:, customer_id:, line_items:) |> Ok
 }
 
 pub type Field(a) {
-  SingleField(
-    name: String,
-    value: String,
-    type_: String,
-    required: Bool,
-    on_input: fn(String) -> Msg,
-    parsed_value: option.Option(Result(a, String)),
-    parse: fn(String) -> Result(a, String),
-  )
-}
-
-fn update_value(value: String, field: Field(a)) {
-  SingleField(
-    ..field,
-    value:,
-    parsed_value: value
-      |> field.parse
-      |> option.Some,
-  )
+  Field(value: String, parsed_value: option.Option(Result(a, String)))
 }
 
 fn init(_) -> #(Model, effect.Effect(Msg)) {
   #(
     Model(
-      date: SingleField(
-        name: "date",
-        type_: "date",
-        value: "",
-        required: True,
-        parsed_value: option.None,
-        on_input: UserUpdatedDate,
-        parse: fn(value) {
-          case value |> string.is_empty {
-            True -> Error("Required")
-            False -> Ok(value)
-          }
-        },
-      ),
-      customer_id: SingleField(
-        name: "customer_id",
-        type_: "text",
-        value: "",
-        required: True,
-        parsed_value: option.None,
-        on_input: UserUpdatedCustomerId,
-        parse: fn(value) {
-          case value |> string.is_empty {
-            True -> Error("Required")
-            False ->
-              value
-              |> int.parse
-              |> result.replace_error("Invalid ID")
-          }
-        },
-      ),
+      date: Field(value: "", parsed_value: option.None),
+      customer_id: Field(value: "", parsed_value: option.None),
+      line_items: dict.new(),
     ),
     effect.none(),
   )
@@ -162,10 +185,65 @@ fn init(_) -> #(Model, effect.Effect(Msg)) {
 
 // UPDATE ----------------------------------------------------------------------
 
+pub type FieldMsg {
+  DateMsg(String)
+  CustomerIdMsg(String)
+  ItemIdMsg(Int, String)
+  QuantityMsg(Int, String)
+}
+
 pub type Msg {
   UserClickedSave
-  UserUpdatedDate(String)
-  UserUpdatedCustomerId(String)
+  UserUpdatedField(FieldMsg)
+}
+
+fn date_parse(value: String) -> Result(String, String) {
+  case
+    value
+    |> string.is_empty
+  {
+    True -> Error("Required")
+    False -> Ok(value)
+  }
+}
+
+fn customer_id_parse(value: String) -> Result(Int, String) {
+  case
+    value
+    |> string.is_empty
+  {
+    True -> Error("Required")
+    False ->
+      value
+      |> int.parse
+      |> result.replace_error("Invalid ID")
+  }
+}
+
+fn item_id_parse(value: String) -> Result(Int, String) {
+  case
+    value
+    |> string.is_empty
+  {
+    True -> Error("Required")
+    False ->
+      value
+      |> int.parse
+      |> result.replace_error("Invalid integer")
+  }
+}
+
+fn quantity_parse(value: String) -> Result(Int, String) {
+  case
+    value
+    |> string.is_empty
+  {
+    True -> Error("Required")
+    False ->
+      value
+      |> int.parse
+      |> result.replace_error("Invalid integer")
+  }
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
@@ -177,25 +255,70 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
 
       let effect =
         model
-        |> encode_model
-        |> result.map(event.emit(event_name, _))
+        |> model_to_form
+        |> result.map(fn(form) {
+          form
+          |> encode_form
+          |> event.emit(event_name, _)
+        })
         |> result.lazy_unwrap(effect.none)
 
       #(model, effect)
     }
 
-    UserUpdatedDate(value) -> {
-      value
-      |> update_value(model.date)
-      |> fn(field) { Model(..model, date: field) }
-      |> pair.new(effect.none())
-    }
-
-    UserUpdatedCustomerId(value) -> {
-      value
-      |> update_value(model.customer_id)
-      |> fn(field) { Model(..model, customer_id: field) }
-      |> pair.new(effect.none())
+    UserUpdatedField(field_update) -> {
+      case field_update {
+        DateMsg(value) -> {
+          let parsed_value = value |> date_parse |> option.Some
+          let date = Field(value:, parsed_value:)
+          let model = Model(..model, date:)
+          #(model, effect.none())
+        }
+        CustomerIdMsg(value) -> {
+          let parsed_value = value |> customer_id_parse |> option.Some
+          let customer_id = Field(value:, parsed_value:)
+          let model = Model(..model, customer_id:)
+          #(model, effect.none())
+        }
+        ItemIdMsg(line_num, value) -> {
+          let Model(line_items:, ..) = model
+          let parsed_value = value |> item_id_parse |> option.Some
+          let item_id = Field(value:, parsed_value:)
+          let line_items =
+            line_items
+            |> dict.upsert(line_num, fn(line_item) {
+              case line_item {
+                option.None ->
+                  LineItemForm(
+                    item_id:,
+                    quantity: Field(value: "", parsed_value: option.None),
+                  )
+                option.Some(line_item) -> LineItemForm(..line_item, item_id:)
+              }
+            })
+          let model = Model(..model, line_items:)
+          #(model, effect.none())
+        }
+        QuantityMsg(line_num, value) -> {
+          let Model(line_items:, ..) = model
+          let parsed_value = value |> quantity_parse |> option.Some
+          let quantity = Field(value:, parsed_value:)
+          let line_items =
+            line_items
+            |> dict.upsert(line_num, fn(line_item) {
+              case line_item {
+                option.None ->
+                  LineItemForm(
+                    quantity:,
+                    item_id: Field(value: "", parsed_value: option.None),
+                  )
+                option.Some(line_item) -> LineItemForm(..line_item, quantity:)
+              }
+            })
+          let model = Model(..model, line_items:)
+          #(model, effect.none())
+        }
+      }
     }
   }
 }
@@ -203,25 +326,52 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(date:, customer_id:) = model
+  let Model(date:, customer_id:, line_items:) = model
 
   html.div([], [
-    view_input(date),
-    view_input(customer_id),
+    view_input(name: "date", type_: "date", on_input: DateMsg, field: date),
+    view_input(
+      name: "customer_id",
+      type_: "text",
+      on_input: CustomerIdMsg,
+      field: customer_id,
+    ),
+    keyed.div(
+      [],
+      line_items
+        |> dict.to_list
+        |> list.map(fn(line_item) {
+          let #(line_num, LineItemForm(item_id:, quantity:)) = line_item
+          #(
+            int.to_string(line_num),
+            html.div([], [
+              view_input(
+                name: "item_id",
+                type_: "text",
+                on_input: ItemIdMsg(line_num, _),
+                field: item_id,
+              ),
+              view_input(
+                name: "quantity",
+                type_: "text",
+                on_input: QuantityMsg(line_num, _),
+                field: quantity,
+              ),
+            ]),
+          )
+        }),
+    ),
     html.button([event.on_click(UserClickedSave)], [html.text("Save")]),
   ])
 }
 
-fn view_input(field: Field(a)) -> Element(Msg) {
-  let SingleField(
-    name:,
-    value:,
-    type_:,
-    parsed_value:,
-    required:,
-    on_input:,
-    ..,
-  ) = field
+fn view_input(
+  name name: String,
+  type_ type_: String,
+  on_input on_input: fn(String) -> FieldMsg,
+  field field: Field(a),
+) {
+  let Field(value:, parsed_value:) = field
 
   html.div([], [
     html.label([attribute.for(name)], [html.text(name), html.text(": ")]),
@@ -229,9 +379,12 @@ fn view_input(field: Field(a)) -> Element(Msg) {
       attribute.type_(type_),
       attribute.id(name),
       attribute.name(name),
-      event.on_input(on_input),
+      event.on_input(fn(value) {
+        value
+        |> on_input
+        |> UserUpdatedField
+      }),
       attribute.value(value),
-      attribute.required(required),
     ]),
     parsed_value
       |> option.map(fn(parsed_value) {

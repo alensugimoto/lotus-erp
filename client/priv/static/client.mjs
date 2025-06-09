@@ -44,8 +44,8 @@ var List = class {
     return length3 - 1;
   }
 };
-function prepend(element4, tail) {
-  return new NonEmpty(element4, tail);
+function prepend(element5, tail) {
+  return new NonEmpty(element5, tail);
 }
 function toList(elements, tail) {
   return List.fromArray(elements, tail);
@@ -1106,6 +1106,44 @@ var unequalDictSymbol = /* @__PURE__ */ Symbol();
 function insert(dict2, key, value2) {
   return map_insert(key, value2, dict2);
 }
+function upsert(dict2, key, fun) {
+  let $ = map_get(dict2, key);
+  if ($.isOk()) {
+    let value2 = $[0];
+    return insert(dict2, key, fun(new Some(value2)));
+  } else {
+    return insert(dict2, key, fun(new None()));
+  }
+}
+function fold_loop(loop$list, loop$initial, loop$fun) {
+  while (true) {
+    let list4 = loop$list;
+    let initial = loop$initial;
+    let fun = loop$fun;
+    if (list4.hasLength(0)) {
+      return initial;
+    } else {
+      let k = list4.head[0];
+      let v = list4.head[1];
+      let rest = list4.tail;
+      loop$list = rest;
+      loop$initial = fun(initial, k, v);
+      loop$fun = fun;
+    }
+  }
+}
+function fold(dict2, initial, fun) {
+  return fold_loop(map_to_list(dict2), initial, fun);
+}
+function do_map_values(f, dict2) {
+  let f$1 = (dict3, k, v) => {
+    return insert(dict3, k, f(k, v));
+  };
+  return fold(dict2, new_map(), f$1);
+}
+function map_values(dict2, fun) {
+  return do_map_values(fun, dict2);
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
 var Ascending = class extends CustomType {
@@ -1148,6 +1186,32 @@ function map_loop(loop$list, loop$fun, loop$acc) {
 function map2(list4, fun) {
   return map_loop(list4, fun, toList([]));
 }
+function try_map_loop(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list4 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list4.hasLength(0)) {
+      return new Ok(reverse(acc));
+    } else {
+      let first$1 = list4.head;
+      let rest$1 = list4.tail;
+      let $ = fun(first$1);
+      if ($.isOk()) {
+        let first$2 = $[0];
+        loop$list = rest$1;
+        loop$fun = fun;
+        loop$acc = prepend(first$2, acc);
+      } else {
+        let error = $[0];
+        return new Error(error);
+      }
+    }
+  }
+}
+function try_map(list4, fun) {
+  return try_map_loop(list4, fun, toList([]));
+}
 function append_loop(loop$first, loop$second) {
   while (true) {
     let first = loop$first;
@@ -1165,7 +1229,7 @@ function append_loop(loop$first, loop$second) {
 function append(first, second2) {
   return append_loop(reverse(first), second2);
 }
-function fold(loop$list, loop$initial, loop$fun) {
+function fold2(loop$list, loop$initial, loop$fun) {
   while (true) {
     let list4 = loop$list;
     let initial = loop$initial;
@@ -1812,6 +1876,9 @@ var trim_end_regex = /* @__PURE__ */ new RegExp(`[${unicode_whitespaces}]*$`);
 function new_map() {
   return Dict.new();
 }
+function map_to_list(map5) {
+  return List.fromArray(map5.entries());
+}
 function map_get(map5, key) {
   const value2 = map5.get(key, NOT_FOUND);
   if (value2 === NOT_FOUND) {
@@ -2030,12 +2097,12 @@ function object(entries) {
 function identity3(x) {
   return x;
 }
+function array(list4) {
+  return list4.toArray();
+}
 
 // build/dev/javascript/gleam_json/gleam/json.mjs
 function string3(input2) {
-  return identity3(input2);
-}
-function bool(input2) {
   return identity3(input2);
 }
 function int3(input2) {
@@ -2043,6 +2110,14 @@ function int3(input2) {
 }
 function object2(entries) {
   return object(entries);
+}
+function preprocessed_array(from2) {
+  return array(from2);
+}
+function array2(entries, inner_type) {
+  let _pipe = entries;
+  let _pipe$1 = map2(_pipe, inner_type);
+  return preprocessed_array(_pipe$1);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/set.mjs
@@ -2192,9 +2267,6 @@ function attribute(name2, value2) {
   return new Attribute(attribute_kind, name2, value2);
 }
 var property_kind = 1;
-function property(name2, value2) {
-  return new Property(property_kind, name2, value2);
-}
 var event_kind = 2;
 function event(name2, handler, include2, prevent_default, stop_propagation, immediate2, debounce, throttle) {
   return new Event2(
@@ -2213,16 +2285,6 @@ function event(name2, handler, include2, prevent_default, stop_propagation, imme
 // build/dev/javascript/lustre/lustre/attribute.mjs
 function attribute2(name2, value2) {
   return attribute(name2, value2);
-}
-function property2(name2, value2) {
-  return property(name2, value2);
-}
-function boolean_attribute(name2, value2) {
-  if (value2) {
-    return attribute2(name2, "");
-  } else {
-    return property2(name2, bool(false));
-  }
 }
 function class$(name2) {
   return attribute2("class", name2);
@@ -2258,9 +2320,6 @@ function for$(id2) {
 }
 function name(element_name) {
   return attribute2("name", element_name);
-}
-function required(is_required) {
-  return boolean_attribute("required", is_required);
 }
 function type_(control_type) {
   return attribute2("type", control_type);
@@ -4196,7 +4255,7 @@ function remove_event(events, path, name2) {
   );
 }
 function remove_attributes(handlers, path, attributes) {
-  return fold(
+  return fold2(
     attributes,
     handlers,
     (events, attribute3) => {
@@ -4250,7 +4309,7 @@ function add_event(events, mapper, path, name2, handler) {
   );
 }
 function add_attributes(handlers, mapper, path, attributes) {
-  return fold(
+  return fold2(
     attributes,
     handlers,
     (events, attribute3) => {
@@ -4671,7 +4730,7 @@ function new$6(options) {
     option_none,
     option_none
   );
-  return fold(
+  return fold2(
     options,
     init4,
     (config, option) => {
@@ -4786,11 +4845,6 @@ function route(path) {
   return attribute2("route", path);
 }
 
-// build/dev/javascript/gleam_stdlib/gleam/pair.mjs
-function new$7(first, second2) {
-  return [first, second2];
-}
-
 // build/dev/javascript/modem/modem.ffi.mjs
 var defaults = {
   handle_external_links: false,
@@ -4895,6 +4949,58 @@ function init(handler) {
   );
 }
 
+// build/dev/javascript/lustre/lustre/element/keyed.mjs
+function extract_keyed_children(children) {
+  let init4 = [empty2(), empty_list, 0];
+  let $ = fold2(
+    children,
+    init4,
+    (_use0, _use1) => {
+      let keyed_children2 = _use0[0];
+      let children$12 = _use0[1];
+      let children_count2 = _use0[2];
+      let key = _use1[0];
+      let element$1 = _use1[1];
+      let keyed_element = to_keyed(key, element$1);
+      let _block;
+      if (key === "") {
+        _block = keyed_children2;
+      } else {
+        _block = insert3(keyed_children2, key, keyed_element);
+      }
+      let keyed_children$1 = _block;
+      return [
+        keyed_children$1,
+        prepend(keyed_element, children$12),
+        children_count2 + 1
+      ];
+    }
+  );
+  let keyed_children = $[0];
+  let children$1 = $[1];
+  let children_count = $[2];
+  return [keyed_children, reverse(children$1), children_count];
+}
+function element4(tag, attributes, children) {
+  let $ = extract_keyed_children(children);
+  let keyed_children = $[0];
+  let children$1 = $[1];
+  return element(
+    "",
+    identity2,
+    "",
+    tag,
+    attributes,
+    children$1,
+    keyed_children,
+    false,
+    false
+  );
+}
+function div2(attributes, children) {
+  return element4("div", attributes, children);
+}
+
 // build/dev/javascript/lustre/lustre/event.mjs
 function emit(event4, data) {
   return event2(event4, data);
@@ -4948,180 +5054,287 @@ function on_input(msg) {
 
 // build/dev/javascript/client/client/formy.mjs
 var Model = class extends CustomType {
-  constructor(date, customer_id) {
+  constructor(date, customer_id, line_items) {
     super();
     this.date = date;
     this.customer_id = customer_id;
+    this.line_items = line_items;
   }
 };
-var SingleField = class extends CustomType {
-  constructor(name2, value2, type_2, required2, on_input2, parsed_value, parse3) {
+var LineItemForm = class extends CustomType {
+  constructor(item_id, quantity) {
     super();
-    this.name = name2;
+    this.item_id = item_id;
+    this.quantity = quantity;
+  }
+};
+var Form = class extends CustomType {
+  constructor(date, customer_id, line_items) {
+    super();
+    this.date = date;
+    this.customer_id = customer_id;
+    this.line_items = line_items;
+  }
+};
+var LineItem = class extends CustomType {
+  constructor(item_id, quantity) {
+    super();
+    this.item_id = item_id;
+    this.quantity = quantity;
+  }
+};
+var Field = class extends CustomType {
+  constructor(value2, parsed_value) {
+    super();
     this.value = value2;
-    this.type_ = type_2;
-    this.required = required2;
-    this.on_input = on_input2;
     this.parsed_value = parsed_value;
-    this.parse = parse3;
+  }
+};
+var DateMsg = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var CustomerIdMsg = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var ItemIdMsg = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+var QuantityMsg = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
   }
 };
 var UserClickedSave = class extends CustomType {
 };
-var UserUpdatedDate = class extends CustomType {
+var UserUpdatedField = class extends CustomType {
   constructor(x0) {
     super();
     this[0] = x0;
   }
 };
-var UserUpdatedCustomerId = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
-};
-function get_parsed_value(field2) {
+function encode_line_item(line_item) {
+  let item_id = line_item.item_id;
+  let quantity = line_item.quantity;
+  return object2(
+    toList([["item_id", int3(item_id)], ["quantity", int3(quantity)]])
+  );
+}
+function encode_form(form) {
+  let date = form.date;
+  let customer_id = form.customer_id;
+  let line_items = form.line_items;
+  return object2(
+    toList([
+      ["date", string3(date)],
+      ["customer_id", int3(customer_id)],
+      ["line_items", array2(line_items, encode_line_item)]
+    ])
+  );
+}
+function get_parsed_value(field2, parse3) {
   let $ = field2.parsed_value;
   if ($ instanceof None) {
     let _pipe = field2.value;
-    return field2.parse(_pipe);
+    return parse3(_pipe);
   } else {
     let parsed_value = $[0];
     return parsed_value;
   }
 }
+function init2(_) {
+  return [
+    new Model(
+      new Field("", new None()),
+      new Field("", new None()),
+      new_map()
+    ),
+    none()
+  ];
+}
+function date_parse(value2) {
+  let $ = (() => {
+    let _pipe = value2;
+    return is_empty(_pipe);
+  })();
+  if ($) {
+    return new Error("Required");
+  } else {
+    return new Ok(value2);
+  }
+}
+function customer_id_parse(value2) {
+  let $ = (() => {
+    let _pipe = value2;
+    return is_empty(_pipe);
+  })();
+  if ($) {
+    return new Error("Required");
+  } else {
+    let _pipe = value2;
+    let _pipe$1 = parse_int(_pipe);
+    return replace_error(_pipe$1, "Invalid ID");
+  }
+}
+function item_id_parse(value2) {
+  let $ = (() => {
+    let _pipe = value2;
+    return is_empty(_pipe);
+  })();
+  if ($) {
+    return new Error("Required");
+  } else {
+    let _pipe = value2;
+    let _pipe$1 = parse_int(_pipe);
+    return replace_error(_pipe$1, "Invalid integer");
+  }
+}
+function quantity_parse(value2) {
+  let $ = (() => {
+    let _pipe = value2;
+    return is_empty(_pipe);
+  })();
+  if ($) {
+    return new Error("Required");
+  } else {
+    let _pipe = value2;
+    let _pipe$1 = parse_int(_pipe);
+    return replace_error(_pipe$1, "Invalid integer");
+  }
+}
 function update_values(model) {
   let date = model.date;
   let customer_id = model.customer_id;
+  let line_items = model.line_items;
   return new Model(
     (() => {
       let _record = date;
-      return new SingleField(
-        _record.name,
+      return new Field(
         _record.value,
-        _record.type_,
-        _record.required,
-        _record.on_input,
         (() => {
           let _pipe = date;
-          let _pipe$1 = get_parsed_value(_pipe);
+          let _pipe$1 = get_parsed_value(_pipe, date_parse);
           return new Some(_pipe$1);
-        })(),
-        _record.parse
+        })()
       );
     })(),
     (() => {
       let _record = customer_id;
-      return new SingleField(
-        _record.name,
+      return new Field(
         _record.value,
-        _record.type_,
-        _record.required,
-        _record.on_input,
         (() => {
           let _pipe = customer_id;
-          let _pipe$1 = get_parsed_value(_pipe);
+          let _pipe$1 = get_parsed_value(_pipe, customer_id_parse);
           return new Some(_pipe$1);
-        })(),
-        _record.parse
+        })()
+      );
+    })(),
+    (() => {
+      let _pipe = line_items;
+      return map_values(
+        _pipe,
+        (_, line_item) => {
+          let item_id = line_item.item_id;
+          let quantity = line_item.quantity;
+          return new LineItemForm(
+            (() => {
+              let _record = item_id;
+              return new Field(
+                _record.value,
+                (() => {
+                  let _pipe$1 = item_id;
+                  let _pipe$2 = get_parsed_value(_pipe$1, item_id_parse);
+                  return new Some(_pipe$2);
+                })()
+              );
+            })(),
+            (() => {
+              let _record = quantity;
+              return new Field(
+                _record.value,
+                (() => {
+                  let _pipe$1 = quantity;
+                  let _pipe$2 = get_parsed_value(_pipe$1, quantity_parse);
+                  return new Some(_pipe$2);
+                })()
+              );
+            })()
+          );
+        }
       );
     })()
   );
 }
-function encode_model(model) {
+function model_to_form(model) {
   let date = model.date;
   let customer_id = model.customer_id;
+  let line_items = model.line_items;
   return try$(
-    get_parsed_value(date),
-    (parsed_date) => {
+    (() => {
+      let _pipe = date;
+      return get_parsed_value(_pipe, date_parse);
+    })(),
+    (date2) => {
       return try$(
-        get_parsed_value(customer_id),
-        (parsed_customer_id) => {
-          let _pipe = toList([
-            [date.name, string3(parsed_date)],
-            [customer_id.name, int3(parsed_customer_id)]
-          ]);
-          let _pipe$1 = object2(_pipe);
-          return new Ok(_pipe$1);
+        (() => {
+          let _pipe = customer_id;
+          return get_parsed_value(_pipe, customer_id_parse);
+        })(),
+        (customer_id2) => {
+          return try$(
+            (() => {
+              let _pipe = line_items;
+              let _pipe$1 = map_to_list(_pipe);
+              return try_map(
+                _pipe$1,
+                (pair) => {
+                  let item_id = pair[1].item_id;
+                  let quantity = pair[1].quantity;
+                  return try$(
+                    (() => {
+                      let _pipe$2 = item_id;
+                      return get_parsed_value(_pipe$2, item_id_parse);
+                    })(),
+                    (item_id2) => {
+                      return try$(
+                        (() => {
+                          let _pipe$2 = quantity;
+                          return get_parsed_value(_pipe$2, quantity_parse);
+                        })(),
+                        (quantity2) => {
+                          let _pipe$2 = new LineItem(item_id2, quantity2);
+                          return new Ok(_pipe$2);
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+            })(),
+            (line_items2) => {
+              let _pipe = new Form(date2, customer_id2, line_items2);
+              return new Ok(_pipe);
+            }
+          );
         }
       );
     }
   );
 }
-function update_value(value2, field2) {
-  let _record = field2;
-  return new SingleField(
-    _record.name,
-    value2,
-    _record.type_,
-    _record.required,
-    _record.on_input,
-    (() => {
-      let _pipe = value2;
-      let _pipe$1 = field2.parse(_pipe);
-      return new Some(_pipe$1);
-    })(),
-    _record.parse
-  );
-}
-function init2(_) {
-  return [
-    new Model(
-      new SingleField(
-        "date",
-        "",
-        "date",
-        true,
-        (var0) => {
-          return new UserUpdatedDate(var0);
-        },
-        new None(),
-        (value2) => {
-          let $ = (() => {
-            let _pipe = value2;
-            return is_empty(_pipe);
-          })();
-          if ($) {
-            return new Error("Required");
-          } else {
-            return new Ok(value2);
-          }
-        }
-      ),
-      new SingleField(
-        "customer_id",
-        "",
-        "text",
-        true,
-        (var0) => {
-          return new UserUpdatedCustomerId(var0);
-        },
-        new None(),
-        (value2) => {
-          let $ = (() => {
-            let _pipe = value2;
-            return is_empty(_pipe);
-          })();
-          if ($) {
-            return new Error("Required");
-          } else {
-            let _pipe = value2;
-            let _pipe$1 = parse_int(_pipe);
-            return replace_error(_pipe$1, "Invalid ID");
-          }
-        }
-      )
-    ),
-    none()
-  ];
-}
 var component_name = "my-form";
-function view_input(field2) {
-  let name2 = field2.name;
+function view_input(name2, type_2, on_input2, field2) {
   let value2 = field2.value;
-  let type_2 = field2.type_;
-  let required2 = field2.required;
-  let on_input2 = field2.on_input;
   let parsed_value = field2.parsed_value;
   return div(
     toList([]),
@@ -5135,9 +5348,14 @@ function view_input(field2) {
           type_(type_2),
           id(name2),
           name(name2),
-          on_input(on_input2),
-          value(value2),
-          required(required2)
+          on_input(
+            (value3) => {
+              let _pipe = value3;
+              let _pipe$1 = on_input2(_pipe);
+              return new UserUpdatedField(_pipe$1);
+            }
+          ),
+          value(value2)
         ])
       ),
       (() => {
@@ -5169,11 +5387,60 @@ function view_input(field2) {
 function view2(model) {
   let date = model.date;
   let customer_id = model.customer_id;
+  let line_items = model.line_items;
   return div(
     toList([]),
     toList([
-      view_input(date),
-      view_input(customer_id),
+      view_input("date", "date", (var0) => {
+        return new DateMsg(var0);
+      }, date),
+      view_input(
+        "customer_id",
+        "text",
+        (var0) => {
+          return new CustomerIdMsg(var0);
+        },
+        customer_id
+      ),
+      div2(
+        toList([]),
+        (() => {
+          let _pipe = line_items;
+          let _pipe$1 = map_to_list(_pipe);
+          return map2(
+            _pipe$1,
+            (line_item) => {
+              let line_num = line_item[0];
+              let item_id = line_item[1].item_id;
+              let quantity = line_item[1].quantity;
+              return [
+                to_string(line_num),
+                div(
+                  toList([]),
+                  toList([
+                    view_input(
+                      "item_id",
+                      "text",
+                      (_capture) => {
+                        return new ItemIdMsg(line_num, _capture);
+                      },
+                      item_id
+                    ),
+                    view_input(
+                      "quantity",
+                      "text",
+                      (_capture) => {
+                        return new QuantityMsg(line_num, _capture);
+                      },
+                      quantity
+                    )
+                  ])
+                )
+              ];
+            }
+          );
+        })()
+      ),
       button(
         toList([on_click(new UserClickedSave())]),
         toList([text3("Save")])
@@ -5190,34 +5457,113 @@ function update2(model, msg) {
     let model$1 = _block;
     let _block$1;
     let _pipe$1 = model$1;
-    let _pipe$2 = encode_model(_pipe$1);
+    let _pipe$2 = model_to_form(_pipe$1);
     let _pipe$3 = map4(
       _pipe$2,
-      (_capture) => {
-        return emit(event_name, _capture);
+      (form) => {
+        let _pipe$32 = form;
+        let _pipe$4 = encode_form(_pipe$32);
+        return ((_capture) => {
+          return emit(event_name, _capture);
+        })(
+          _pipe$4
+        );
       }
     );
     _block$1 = lazy_unwrap2(_pipe$3, none);
     let effect = _block$1;
     return [model$1, effect];
-  } else if (msg instanceof UserUpdatedDate) {
-    let value2 = msg[0];
-    let _pipe = value2;
-    let _pipe$1 = update_value(_pipe, model.date);
-    let _pipe$2 = ((field2) => {
-      let _record = model;
-      return new Model(field2, _record.customer_id);
-    })(_pipe$1);
-    return new$7(_pipe$2, none());
   } else {
-    let value2 = msg[0];
-    let _pipe = value2;
-    let _pipe$1 = update_value(_pipe, model.customer_id);
-    let _pipe$2 = ((field2) => {
+    let field_update = msg[0];
+    if (field_update instanceof DateMsg) {
+      let value2 = field_update[0];
+      let _block;
+      let _pipe = value2;
+      let _pipe$1 = date_parse(_pipe);
+      _block = new Some(_pipe$1);
+      let parsed_value = _block;
+      let date = new Field(value2, parsed_value);
+      let _block$1;
       let _record = model;
-      return new Model(_record.date, field2);
-    })(_pipe$1);
-    return new$7(_pipe$2, none());
+      _block$1 = new Model(date, _record.customer_id, _record.line_items);
+      let model$1 = _block$1;
+      return [model$1, none()];
+    } else if (field_update instanceof CustomerIdMsg) {
+      let value2 = field_update[0];
+      let _block;
+      let _pipe = value2;
+      let _pipe$1 = customer_id_parse(_pipe);
+      _block = new Some(_pipe$1);
+      let parsed_value = _block;
+      let customer_id = new Field(value2, parsed_value);
+      let _block$1;
+      let _record = model;
+      _block$1 = new Model(_record.date, customer_id, _record.line_items);
+      let model$1 = _block$1;
+      return [model$1, none()];
+    } else if (field_update instanceof ItemIdMsg) {
+      let line_num = field_update[0];
+      let value2 = field_update[1];
+      let line_items = model.line_items;
+      let _block;
+      let _pipe = value2;
+      let _pipe$1 = item_id_parse(_pipe);
+      _block = new Some(_pipe$1);
+      let parsed_value = _block;
+      let item_id = new Field(value2, parsed_value);
+      let _block$1;
+      let _pipe$2 = line_items;
+      _block$1 = upsert(
+        _pipe$2,
+        line_num,
+        (line_item) => {
+          if (line_item instanceof None) {
+            return new LineItemForm(item_id, new Field("", new None()));
+          } else {
+            let line_item$1 = line_item[0];
+            let _record2 = line_item$1;
+            return new LineItemForm(item_id, _record2.quantity);
+          }
+        }
+      );
+      let line_items$1 = _block$1;
+      let _block$2;
+      let _record = model;
+      _block$2 = new Model(_record.date, _record.customer_id, line_items$1);
+      let model$1 = _block$2;
+      return [model$1, none()];
+    } else {
+      let line_num = field_update[0];
+      let value2 = field_update[1];
+      let line_items = model.line_items;
+      let _block;
+      let _pipe = value2;
+      let _pipe$1 = quantity_parse(_pipe);
+      _block = new Some(_pipe$1);
+      let parsed_value = _block;
+      let quantity = new Field(value2, parsed_value);
+      let _block$1;
+      let _pipe$2 = line_items;
+      _block$1 = upsert(
+        _pipe$2,
+        line_num,
+        (line_item) => {
+          if (line_item instanceof None) {
+            return new LineItemForm(new Field("", new None()), quantity);
+          } else {
+            let line_item$1 = line_item[0];
+            let _record2 = line_item$1;
+            return new LineItemForm(_record2.item_id, quantity);
+          }
+        }
+      );
+      let line_items$1 = _block$1;
+      let _block$2;
+      let _record = model;
+      _block$2 = new Model(_record.date, _record.customer_id, line_items$1);
+      let model$1 = _block$2;
+      return [model$1, none()];
+    }
   }
 }
 function register() {

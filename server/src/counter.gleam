@@ -31,9 +31,10 @@ pub opaque type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     UserClickedSave(form) -> {
-      let formy.Form(date:, customer_id:) = form
+      let formy.Form(date:, customer_id:, line_items:) = form
       echo date
       echo customer_id
+      echo line_items
       #(model, effect.none())
     }
   }
