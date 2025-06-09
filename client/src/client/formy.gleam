@@ -50,13 +50,29 @@ pub fn on_change(handler: fn(Form) -> msg) -> Attribute(msg) {
 pub type Model {
   Model(
     date: Field(String),
+    add: Field(String),
+    remarks: Field(String),
+    customer_remarks: Field(String),
     customer_id: Field(Int),
+    sales_rep_id: Field(Int),
+    buyer_name: Field(String),
+    customer_name: Field(String),
+    ship_via: Field(String),
+    freight_charge: Field(Float),
+    warehouse_id: Field(Int),
     line_items: dict.Dict(Int, LineItemForm),
+    project_name: Field(String),
   )
 }
 
 pub type LineItemForm {
-  LineItemForm(item_id: Field(Int), quantity: Field(Int))
+  LineItemForm(
+    item_id: Field(Int),
+    quantity: Field(Int),
+    unit_price: Field(Float),
+    commission_rate: Field(Float),
+    discount_rate: Field(Float),
+  )
 }
 
 pub type Form {
@@ -176,15 +192,33 @@ fn model_to_form(model: Model) -> Result(Form, String) {
   Form(date:, customer_id:, line_items:) |> Ok
 }
 
-pub type Field(a) {
-  Field(value: String, parsed_value: option.Option(Result(a, String)))
+pub type ParsedValue {
+  ParsedDate
+}
+
+pub type Field {
+  Field(value: String, parsed_value: option.Option(Result(ParsedValue, String)))
+}
+
+fn new_field() -> Field {
+  Field(value: "", parsed_value: option.None)
 }
 
 fn init(_) -> #(Model, effect.Effect(Msg)) {
   #(
     Model(
-      date: Field(value: "", parsed_value: option.None),
-      customer_id: Field(value: "", parsed_value: option.None),
+      date: new_field(),
+      add: new_field(),
+      remarks: new_field(),
+      customer_remarks: new_field(),
+      customer_id: new_field(),
+      sales_rep_id: new_field(),
+      buyer_name: new_field(),
+      customer_name: new_field(),
+      ship_via: new_field(),
+      freight_charge: new_field(),
+      warehouse_id: new_field(),
+      project_name: new_field(),
       line_items: dict.new(),
     ),
     effect.none(),
@@ -193,18 +227,30 @@ fn init(_) -> #(Model, effect.Effect(Msg)) {
 
 // UPDATE ----------------------------------------------------------------------
 
-pub type FieldMsg {
-  DateMsg(String)
-  CustomerIdMsg(String)
-  ItemIdMsg(Int, String)
-  QuantityMsg(Int, String)
-}
-
 pub type Msg {
   UserClickedSave
-  UserUpdatedField(FieldMsg)
+  //
   UserAddedLineItem
   UserRemovedLineItem(Int)
+  //
+  UserUpdatedDate(String)
+  UserUpdatedCustomerId(String)
+  UserUpdatedShipVia(String)
+  UserUpdatedWarehouseId(String)
+  UserUpdatedFreightCharge(String)
+  UserUpdatedProjectName(String)
+  UserUpdatedAdd(String)
+  UserUpdatedRemarks(String)
+  UserUpdatedCustomerRemarks(String)
+  UserUpdatedSalesRepId(String)
+  UserUpdatedBuyerName(String)
+  UserUpdatedCustomerName(String)
+  //
+  UserUpdatedItemId(Int, String)
+  UserUpdatedQuantity(Int, String)
+  UserUpdatedCommissionRate(Int, String)
+  UserUpdatedUnitPrice(Int, String)
+  UserUpdatedDiscountRate(Int, String)
 }
 
 fn date_parse(value: String) -> Result(String, String) {
@@ -276,59 +322,64 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       #(model, effect)
     }
 
-    UserUpdatedField(field_update) -> {
-      case field_update {
-        DateMsg(value) -> {
-          let parsed_value = value |> date_parse |> option.Some
-          let date = Field(value:, parsed_value:)
-          let model = Model(..model, date:)
-          #(model, effect.none())
-        }
-        CustomerIdMsg(value) -> {
-          let parsed_value = value |> customer_id_parse |> option.Some
-          let customer_id = Field(value:, parsed_value:)
-          let model = Model(..model, customer_id:)
-          #(model, effect.none())
-        }
-        ItemIdMsg(line_num, value) -> {
-          let Model(line_items:, ..) = model
-          let parsed_value = value |> item_id_parse |> option.Some
-          let item_id = Field(value:, parsed_value:)
-          let line_items =
-            line_items
-            |> dict.upsert(line_num, fn(line_item) {
-              case line_item {
-                option.None ->
-                  LineItemForm(
-                    item_id:,
-                    quantity: Field(value: "", parsed_value: option.None),
-                  )
-                option.Some(line_item) -> LineItemForm(..line_item, item_id:)
-              }
-            })
-          let model = Model(..model, line_items:)
-          #(model, effect.none())
-        }
-        QuantityMsg(line_num, value) -> {
-          let Model(line_items:, ..) = model
-          let parsed_value = value |> quantity_parse |> option.Some
-          let quantity = Field(value:, parsed_value:)
-          let line_items =
-            line_items
-            |> dict.upsert(line_num, fn(line_item) {
-              case line_item {
-                option.None ->
-                  LineItemForm(
-                    quantity:,
-                    item_id: Field(value: "", parsed_value: option.None),
-                  )
-                option.Some(line_item) -> LineItemForm(..line_item, quantity:)
-              }
-            })
-          let model = Model(..model, line_items:)
-          #(model, effect.none())
-        }
-      }
+    UserUpdatedDate(value) -> {
+      let parsed_value = value |> date_parse |> option.Some
+      let date = Field(value:, parsed_value:)
+      let model = Model(..model, date:)
+      #(model, effect.none())
+    }
+
+    UserUpdatedCustomerId(value) -> {
+      let parsed_value = value |> customer_id_parse |> option.Some
+      let customer_id = Field(value:, parsed_value:)
+      let model = Model(..model, customer_id:)
+      #(model, effect.none())
+    }
+
+    UserUpdatedItemId(line_num, value) -> {
+      let Model(line_items:, ..) = model
+      let parsed_value = value |> item_id_parse |> option.Some
+      let item_id = Field(value:, parsed_value:)
+      let line_items =
+        line_items
+        |> dict.upsert(line_num, fn(line_item) {
+          case line_item {
+            option.None ->
+              LineItemForm(
+                item_id:,
+                quantity: new_field(),
+                unit_price: new_field(),
+                commission_rate: new_field(),
+                discount_rate: new_field(),
+              )
+            option.Some(line_item) -> LineItemForm(..line_item, item_id:)
+          }
+        })
+      let model = Model(..model, line_items:)
+      #(model, effect.none())
+    }
+
+    UserUpdatedQuantity(line_num, value) -> {
+      let Model(line_items:, ..) = model
+      let parsed_value = value |> quantity_parse |> option.Some
+      let quantity = Field(value:, parsed_value:)
+      let line_items =
+        line_items
+        |> dict.upsert(line_num, fn(line_item) {
+          case line_item {
+            option.None ->
+              LineItemForm(
+                quantity:,
+                item_id: new_field(),
+                unit_price: new_field(),
+                commission_rate: new_field(),
+                discount_rate: new_field(),
+              )
+            option.Some(line_item) -> LineItemForm(..line_item, quantity:)
+          }
+        })
+      let model = Model(..model, line_items:)
+      #(model, effect.none())
     }
 
     UserAddedLineItem -> {
@@ -343,8 +394,11 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         |> dict.insert(
           max_line_num + 1,
           LineItemForm(
-            item_id: Field(value: "", parsed_value: option.None),
-            quantity: Field(value: "", parsed_value: option.None),
+            item_id: new_field(),
+            quantity: new_field(),
+            unit_price: new_field(),
+            commission_rate: new_field(),
+            discount_rate: new_field(),
           ),
         )
       let model = Model(..model, line_items:)
@@ -359,21 +413,114 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       let model = Model(..model, line_items:)
       #(model, effect.none())
     }
+
+    UserUpdatedShipVia(value) -> {
+      let parsed_value = value |> date_parse |> option.Some
+      let date = Field(value:, parsed_value:)
+      let model = Model(..model, date:)
+      #(model, effect.none())
+    }
+    UserUpdatedWarehouseId(value) -> todo
+    UserUpdatedFreightCharge(value) -> todo
+    UserUpdatedProjectName(value) -> todo
+    UserUpdatedAdd(value) -> todo
+    UserUpdatedRemarks(value) -> todo
+    UserUpdatedCustomerRemarks(value) -> todo
+    UserUpdatedSalesRepId(value) -> todo
+    UserUpdatedBuyerName(value) -> todo
+    UserUpdatedCustomerName(value) -> todo
+    UserUpdatedCommissionRate(_, _) -> todo
+    UserUpdatedDiscountRate(_, _) -> todo
+    UserUpdatedUnitPrice(_, _) -> todo
   }
 }
 
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(date:, customer_id:, line_items:) = model
+  let Model(
+    date:,
+    add:,
+    remarks:,
+    customer_remarks:,
+    customer_id:,
+    sales_rep_id:,
+    buyer_name:,
+    customer_name:,
+    ship_via:,
+    freight_charge:,
+    warehouse_id:,
+    project_name:,
+    line_items:,
+  ) = model
 
   html.div([], [
-    view_input(name: "date", type_: "date", on_input: DateMsg, field: date),
+    view_input(
+      name: "date",
+      type_: "date",
+      on_input: UserUpdatedDate,
+      field: date,
+    ),
+    view_input(name: "add", type_: "text", on_input: UserUpdatedAdd, field: add),
+    view_input(
+      name: "remarks",
+      type_: "text",
+      on_input: UserUpdatedRemarks,
+      field: remarks,
+    ),
+    view_input(
+      name: "customer_remarks",
+      type_: "text",
+      on_input: UserUpdatedCustomerRemarks,
+      field: customer_remarks,
+    ),
     view_input(
       name: "customer_id",
       type_: "text",
-      on_input: CustomerIdMsg,
+      on_input: UserUpdatedCustomerId,
       field: customer_id,
+    ),
+    view_input(
+      name: "sales_rep_id",
+      type_: "text",
+      on_input: UserUpdatedSalesRepId,
+      field: sales_rep_id,
+    ),
+    view_input(
+      name: "buyer_name",
+      type_: "text",
+      on_input: UserUpdatedBuyerName,
+      field: buyer_name,
+    ),
+    view_input(
+      name: "customer_name",
+      type_: "text",
+      on_input: UserUpdatedCustomerName,
+      field: customer_name,
+    ),
+    view_input(
+      name: "ship_via",
+      type_: "text",
+      on_input: UserUpdatedShipVia,
+      field: ship_via,
+    ),
+    view_input(
+      name: "freight_charge",
+      type_: "text",
+      on_input: UserUpdatedFreightCharge,
+      field: freight_charge,
+    ),
+    view_input(
+      name: "warehouse_id",
+      type_: "text",
+      on_input: UserUpdatedWarehouseId,
+      field: warehouse_id,
+    ),
+    view_input(
+      name: "project_name",
+      type_: "text",
+      on_input: UserUpdatedProjectName,
+      field: project_name,
     ),
     html.div([], [
       keyed.div(
@@ -381,21 +528,48 @@ fn view(model: Model) -> Element(Msg) {
         line_items
           |> line_items_dict_to_list
           |> list.map(fn(line_item) {
-            let #(line_num, LineItemForm(item_id:, quantity:)) = line_item
+            let #(
+              line_num,
+              LineItemForm(
+                item_id:,
+                quantity:,
+                unit_price:,
+                commission_rate:,
+                discount_rate:,
+              ),
+            ) = line_item
             #(
               int.to_string(line_num),
               html.div([], [
                 view_input(
                   name: "item_id",
                   type_: "text",
-                  on_input: ItemIdMsg(line_num, _),
+                  on_input: UserUpdatedItemId(line_num, _),
                   field: item_id,
                 ),
                 view_input(
                   name: "quantity",
                   type_: "text",
-                  on_input: QuantityMsg(line_num, _),
+                  on_input: UserUpdatedQuantity(line_num, _),
                   field: quantity,
+                ),
+                view_input(
+                  name: "unit_price",
+                  type_: "text",
+                  on_input: UserUpdatedUnitPrice(line_num, _),
+                  field: unit_price,
+                ),
+                view_input(
+                  name: "commission_rate",
+                  type_: "text",
+                  on_input: UserUpdatedCommissionRate(line_num, _),
+                  field: commission_rate,
+                ),
+                view_input(
+                  name: "discount_rate",
+                  type_: "text",
+                  on_input: UserUpdatedDiscountRate(line_num, _),
+                  field: discount_rate,
                 ),
                 html.button([event.on_click(UserRemovedLineItem(line_num))], [
                   html.text("Remove"),
@@ -413,7 +587,7 @@ fn view(model: Model) -> Element(Msg) {
 fn view_input(
   name name: String,
   type_ type_: String,
-  on_input on_input: fn(String) -> FieldMsg,
+  on_input on_input: fn(String) -> Msg,
   field field: Field(a),
 ) {
   let Field(value:, parsed_value:) = field
@@ -424,11 +598,7 @@ fn view_input(
       attribute.type_(type_),
       attribute.id(name),
       attribute.name(name),
-      event.on_input(fn(value) {
-        value
-        |> on_input
-        |> UserUpdatedField
-      }),
+      event.on_input(on_input),
       attribute.value(value),
     ]),
     parsed_value

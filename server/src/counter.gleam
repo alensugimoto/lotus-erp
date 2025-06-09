@@ -1,10 +1,12 @@
 import client/formy
+import gleam/list
 import lustre.{type App}
 import lustre/component
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
 import pog
+import sql
 
 // MAIN ------------------------------------------------------------------------
 
@@ -31,10 +33,17 @@ pub opaque type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     UserClickedSave(form) -> {
+      let inserted_by = 1
       let formy.Form(date:, customer_id:, line_items:) = form
-      echo date
-      echo customer_id
-      echo line_items
+      let #(item_ids, quantities) =
+        line_items
+        |> list.map(fn(line_item) {
+          let formy.LineItem(item_id:, quantity:) = line_item
+          #(item_id, quantity)
+        })
+        |> list.unzip
+
+      sql.insert_quote(model.db, date, customer_id, item_ids, quantities)
       #(model, effect.none())
     }
   }
