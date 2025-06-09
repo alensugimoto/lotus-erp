@@ -145,6 +145,14 @@ fn update_values(model: Model) -> Model {
   )
 }
 
+fn line_items_dict_to_list(
+  dict: dict.Dict(Int, LineItemForm),
+) -> List(#(Int, LineItemForm)) {
+  dict
+  |> dict.to_list
+  |> list.sort(fn(a, b) { int.compare(a.0, b.0) })
+}
+
 fn model_to_form(model: Model) -> Result(Form, String) {
   let Model(date:, customer_id:, line_items:) = model
   use date <- result.try(
@@ -157,7 +165,7 @@ fn model_to_form(model: Model) -> Result(Form, String) {
   )
   use line_items <- result.try(
     line_items
-    |> dict.to_list
+    |> line_items_dict_to_list
     |> list.try_map(fn(pair) {
       let #(_, LineItemForm(item_id:, quantity:)) = pair
       use item_id <- result.try(item_id |> get_parsed_value(item_id_parse))
@@ -195,6 +203,8 @@ pub type FieldMsg {
 pub type Msg {
   UserClickedSave
   UserUpdatedField(FieldMsg)
+  UserAddedLineItem
+  UserRemovedLineItem(Int)
 }
 
 fn date_parse(value: String) -> Result(String, String) {
@@ -320,6 +330,35 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
         }
       }
     }
+
+    UserAddedLineItem -> {
+      let Model(line_items:, ..) = model
+      let max_line_num =
+        line_items
+        |> dict.keys
+        |> list.max(int.compare)
+        |> result.unwrap(0)
+      let line_items =
+        line_items
+        |> dict.insert(
+          max_line_num + 1,
+          LineItemForm(
+            item_id: Field(value: "", parsed_value: option.None),
+            quantity: Field(value: "", parsed_value: option.None),
+          ),
+        )
+      let model = Model(..model, line_items:)
+      #(model, effect.none())
+    }
+
+    UserRemovedLineItem(line_num) -> {
+      let Model(line_items:, ..) = model
+      let line_items =
+        line_items
+        |> dict.delete(line_num)
+      let model = Model(..model, line_items:)
+      #(model, effect.none())
+    }
   }
 }
 
@@ -336,31 +375,37 @@ fn view(model: Model) -> Element(Msg) {
       on_input: CustomerIdMsg,
       field: customer_id,
     ),
-    keyed.div(
-      [],
-      line_items
-        |> dict.to_list
-        |> list.map(fn(line_item) {
-          let #(line_num, LineItemForm(item_id:, quantity:)) = line_item
-          #(
-            int.to_string(line_num),
-            html.div([], [
-              view_input(
-                name: "item_id",
-                type_: "text",
-                on_input: ItemIdMsg(line_num, _),
-                field: item_id,
-              ),
-              view_input(
-                name: "quantity",
-                type_: "text",
-                on_input: QuantityMsg(line_num, _),
-                field: quantity,
-              ),
-            ]),
-          )
-        }),
-    ),
+    html.div([], [
+      keyed.div(
+        [],
+        line_items
+          |> line_items_dict_to_list
+          |> list.map(fn(line_item) {
+            let #(line_num, LineItemForm(item_id:, quantity:)) = line_item
+            #(
+              int.to_string(line_num),
+              html.div([], [
+                view_input(
+                  name: "item_id",
+                  type_: "text",
+                  on_input: ItemIdMsg(line_num, _),
+                  field: item_id,
+                ),
+                view_input(
+                  name: "quantity",
+                  type_: "text",
+                  on_input: QuantityMsg(line_num, _),
+                  field: quantity,
+                ),
+                html.button([event.on_click(UserRemovedLineItem(line_num))], [
+                  html.text("Remove"),
+                ]),
+              ]),
+            )
+          }),
+      ),
+      html.button([event.on_click(UserAddedLineItem)], [html.text("Add")]),
+    ]),
     html.button([event.on_click(UserClickedSave)], [html.text("Save")]),
   ])
 }

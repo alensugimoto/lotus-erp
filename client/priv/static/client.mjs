@@ -1106,6 +1106,40 @@ var unequalDictSymbol = /* @__PURE__ */ Symbol();
 function insert(dict2, key, value2) {
   return map_insert(key, value2, dict2);
 }
+function reverse_and_concat(loop$remaining, loop$accumulator) {
+  while (true) {
+    let remaining = loop$remaining;
+    let accumulator = loop$accumulator;
+    if (remaining.hasLength(0)) {
+      return accumulator;
+    } else {
+      let first = remaining.head;
+      let rest = remaining.tail;
+      loop$remaining = rest;
+      loop$accumulator = prepend(first, accumulator);
+    }
+  }
+}
+function do_keys_loop(loop$list, loop$acc) {
+  while (true) {
+    let list4 = loop$list;
+    let acc = loop$acc;
+    if (list4.hasLength(0)) {
+      return reverse_and_concat(acc, toList([]));
+    } else {
+      let key = list4.head[0];
+      let rest = list4.tail;
+      loop$list = rest;
+      loop$acc = prepend(key, acc);
+    }
+  }
+}
+function keys(dict2) {
+  return do_keys_loop(map_to_list(dict2), toList([]));
+}
+function delete$(dict2, key) {
+  return map_remove(key, dict2);
+}
 function upsert(dict2, key, fun) {
   let $ = map_get(dict2, key);
   if ($.isOk()) {
@@ -1581,6 +1615,42 @@ function sort(list4, compare5) {
     return merge_all(sequences$1, new Ascending(), compare5);
   }
 }
+function max_loop(loop$list, loop$compare, loop$max) {
+  while (true) {
+    let list4 = loop$list;
+    let compare5 = loop$compare;
+    let max3 = loop$max;
+    if (list4.hasLength(0)) {
+      return max3;
+    } else {
+      let first$1 = list4.head;
+      let rest$1 = list4.tail;
+      let $ = compare5(first$1, max3);
+      if ($ instanceof Gt) {
+        loop$list = rest$1;
+        loop$compare = compare5;
+        loop$max = first$1;
+      } else if ($ instanceof Lt) {
+        loop$list = rest$1;
+        loop$compare = compare5;
+        loop$max = max3;
+      } else {
+        loop$list = rest$1;
+        loop$compare = compare5;
+        loop$max = max3;
+      }
+    }
+  }
+}
+function max(list4, compare5) {
+  if (list4.hasLength(0)) {
+    return new Error(void 0);
+  } else {
+    let first$1 = list4.head;
+    let rest$1 = list4.tail;
+    return new Ok(max_loop(rest$1, compare5, first$1));
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
 function is_empty(str) {
@@ -1879,6 +1949,9 @@ function new_map() {
 function map_to_list(map5) {
   return List.fromArray(map5.entries());
 }
+function map_remove(key, map5) {
+  return map5.delete(key);
+}
 function map_get(map5, key) {
   const value2 = map5.get(key, NOT_FOUND);
   if (value2 === NOT_FOUND) {
@@ -2062,6 +2135,14 @@ function try$(result, fun) {
   } else {
     let e = result[0];
     return new Error(e);
+  }
+}
+function unwrap(result, default$) {
+  if (result.isOk()) {
+    let v = result[0];
+    return v;
+  } else {
+    return default$;
   }
 }
 function lazy_unwrap2(result, default$) {
@@ -5124,6 +5205,14 @@ var UserUpdatedField = class extends CustomType {
     this[0] = x0;
   }
 };
+var UserAddedLineItem = class extends CustomType {
+};
+var UserRemovedLineItem = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
 function encode_line_item(line_item) {
   let item_id = line_item.item_id;
   let quantity = line_item.quantity;
@@ -5152,6 +5241,13 @@ function get_parsed_value(field2, parse3) {
     let parsed_value = $[0];
     return parsed_value;
   }
+}
+function line_items_dict_to_list(dict2) {
+  let _pipe = dict2;
+  let _pipe$1 = map_to_list(_pipe);
+  return sort(_pipe$1, (a2, b) => {
+    return compare2(a2[0], b[0]);
+  });
 }
 function init2(_) {
   return [
@@ -5295,7 +5391,7 @@ function model_to_form(model) {
           return try$(
             (() => {
               let _pipe = line_items;
-              let _pipe$1 = map_to_list(_pipe);
+              let _pipe$1 = line_items_dict_to_list(_pipe);
               return try_map(
                 _pipe$1,
                 (pair) => {
@@ -5402,44 +5498,59 @@ function view2(model) {
         },
         customer_id
       ),
-      div2(
+      div(
         toList([]),
-        (() => {
-          let _pipe = line_items;
-          let _pipe$1 = map_to_list(_pipe);
-          return map2(
-            _pipe$1,
-            (line_item) => {
-              let line_num = line_item[0];
-              let item_id = line_item[1].item_id;
-              let quantity = line_item[1].quantity;
-              return [
-                to_string(line_num),
-                div(
-                  toList([]),
-                  toList([
-                    view_input(
-                      "item_id",
-                      "text",
-                      (_capture) => {
-                        return new ItemIdMsg(line_num, _capture);
-                      },
-                      item_id
-                    ),
-                    view_input(
-                      "quantity",
-                      "text",
-                      (_capture) => {
-                        return new QuantityMsg(line_num, _capture);
-                      },
-                      quantity
+        toList([
+          div2(
+            toList([]),
+            (() => {
+              let _pipe = line_items;
+              let _pipe$1 = line_items_dict_to_list(_pipe);
+              return map2(
+                _pipe$1,
+                (line_item) => {
+                  let line_num = line_item[0];
+                  let item_id = line_item[1].item_id;
+                  let quantity = line_item[1].quantity;
+                  return [
+                    to_string(line_num),
+                    div(
+                      toList([]),
+                      toList([
+                        view_input(
+                          "item_id",
+                          "text",
+                          (_capture) => {
+                            return new ItemIdMsg(line_num, _capture);
+                          },
+                          item_id
+                        ),
+                        view_input(
+                          "quantity",
+                          "text",
+                          (_capture) => {
+                            return new QuantityMsg(line_num, _capture);
+                          },
+                          quantity
+                        ),
+                        button(
+                          toList([
+                            on_click(new UserRemovedLineItem(line_num))
+                          ]),
+                          toList([text3("Remove")])
+                        )
+                      ])
                     )
-                  ])
-                )
-              ];
-            }
-          );
-        })()
+                  ];
+                }
+              );
+            })()
+          ),
+          button(
+            toList([on_click(new UserAddedLineItem())]),
+            toList([text3("Add")])
+          )
+        ])
       ),
       button(
         toList([on_click(new UserClickedSave())]),
@@ -5473,7 +5584,7 @@ function update2(model, msg) {
     _block$1 = lazy_unwrap2(_pipe$3, none);
     let effect = _block$1;
     return [model$1, effect];
-  } else {
+  } else if (msg instanceof UserUpdatedField) {
     let field_update = msg[0];
     if (field_update instanceof DateMsg) {
       let value2 = field_update[0];
@@ -5564,6 +5675,42 @@ function update2(model, msg) {
       let model$1 = _block$2;
       return [model$1, none()];
     }
+  } else if (msg instanceof UserAddedLineItem) {
+    let line_items = model.line_items;
+    let _block;
+    let _pipe = line_items;
+    let _pipe$1 = keys(_pipe);
+    let _pipe$2 = max(_pipe$1, compare2);
+    _block = unwrap(_pipe$2, 0);
+    let max_line_num = _block;
+    let _block$1;
+    let _pipe$3 = line_items;
+    _block$1 = insert(
+      _pipe$3,
+      max_line_num + 1,
+      new LineItemForm(
+        new Field("", new None()),
+        new Field("", new None())
+      )
+    );
+    let line_items$1 = _block$1;
+    let _block$2;
+    let _record = model;
+    _block$2 = new Model(_record.date, _record.customer_id, line_items$1);
+    let model$1 = _block$2;
+    return [model$1, none()];
+  } else {
+    let line_num = msg[0];
+    let line_items = model.line_items;
+    let _block;
+    let _pipe = line_items;
+    _block = delete$(_pipe, line_num);
+    let line_items$1 = _block;
+    let _block$1;
+    let _record = model;
+    _block$1 = new Model(_record.date, _record.customer_id, line_items$1);
+    let model$1 = _block$1;
+    return [model$1, none()];
   }
 }
 function register() {
