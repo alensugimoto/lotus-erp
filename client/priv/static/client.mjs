@@ -1895,6 +1895,13 @@ function parse_int(value2) {
     return new Error(Nil);
   }
 }
+function parse_float(value2) {
+  if (/^[-+]?(\d+)\.(\d+)([eE][-+]?\d+)?$/.test(value2)) {
+    return new Ok(parseFloat(value2));
+  } else {
+    return new Error(Nil);
+  }
+}
 function to_string(term) {
   return term.toString();
 }
@@ -2170,6 +2177,15 @@ function replace_error(result, error) {
     return new Error(error);
   }
 }
+function try_recover(result, fun) {
+  if (result.isOk()) {
+    let value2 = result[0];
+    return new Ok(value2);
+  } else {
+    let error = result[0];
+    return fun(error);
+  }
+}
 
 // build/dev/javascript/gleam_json/gleam_json_ffi.mjs
 function object(entries) {
@@ -2187,6 +2203,9 @@ function string3(input2) {
   return identity3(input2);
 }
 function int3(input2) {
+  return identity3(input2);
+}
+function float2(input2) {
   return identity3(input2);
 }
 function object2(entries) {
@@ -4032,8 +4051,8 @@ var SYNCED_ATTRIBUTES = {
 var virtualise = (root3) => {
   const vdom = virtualiseNode(null, root3);
   if (vdom === null || vdom.children instanceof Empty) {
-    const empty3 = emptyTextNode(root3);
-    root3.appendChild(empty3);
+    const empty4 = emptyTextNode(root3);
+    root3.appendChild(empty4);
     return none2();
   } else if (vdom.children instanceof NonEmpty && vdom.children.tail instanceof Empty) {
     return vdom.children.head;
@@ -4926,6 +4945,11 @@ function route(path) {
   return attribute2("route", path);
 }
 
+// build/dev/javascript/gleam_stdlib/gleam/pair.mjs
+function new$7(first, second2) {
+  return [first, second2];
+}
+
 // build/dev/javascript/modem/modem.ffi.mjs
 var defaults = {
   handle_external_links: false,
@@ -5028,6 +5052,96 @@ function init(handler) {
       );
     }
   );
+}
+
+// build/dev/javascript/gleam_time/gleam/time/calendar.mjs
+var Date2 = class extends CustomType {
+  constructor(year, month, day) {
+    super();
+    this.year = year;
+    this.month = month;
+    this.day = day;
+  }
+};
+var January = class extends CustomType {
+};
+var February = class extends CustomType {
+};
+var March = class extends CustomType {
+};
+var April = class extends CustomType {
+};
+var May = class extends CustomType {
+};
+var June = class extends CustomType {
+};
+var July = class extends CustomType {
+};
+var August = class extends CustomType {
+};
+var September = class extends CustomType {
+};
+var October = class extends CustomType {
+};
+var November = class extends CustomType {
+};
+var December = class extends CustomType {
+};
+function month_to_int(month) {
+  if (month instanceof January) {
+    return 1;
+  } else if (month instanceof February) {
+    return 2;
+  } else if (month instanceof March) {
+    return 3;
+  } else if (month instanceof April) {
+    return 4;
+  } else if (month instanceof May) {
+    return 5;
+  } else if (month instanceof June) {
+    return 6;
+  } else if (month instanceof July) {
+    return 7;
+  } else if (month instanceof August) {
+    return 8;
+  } else if (month instanceof September) {
+    return 9;
+  } else if (month instanceof October) {
+    return 10;
+  } else if (month instanceof November) {
+    return 11;
+  } else {
+    return 12;
+  }
+}
+function month_from_int(month) {
+  if (month === 1) {
+    return new Ok(new January());
+  } else if (month === 2) {
+    return new Ok(new February());
+  } else if (month === 3) {
+    return new Ok(new March());
+  } else if (month === 4) {
+    return new Ok(new April());
+  } else if (month === 5) {
+    return new Ok(new May());
+  } else if (month === 6) {
+    return new Ok(new June());
+  } else if (month === 7) {
+    return new Ok(new July());
+  } else if (month === 8) {
+    return new Ok(new August());
+  } else if (month === 9) {
+    return new Ok(new September());
+  } else if (month === 10) {
+    return new Ok(new October());
+  } else if (month === 11) {
+    return new Ok(new November());
+  } else if (month === 12) {
+    return new Ok(new December());
+  } else {
+    return new Error(void 0);
+  }
 }
 
 // build/dev/javascript/lustre/lustre/element/keyed.mjs
@@ -5134,34 +5248,78 @@ function on_input(msg) {
 }
 
 // build/dev/javascript/client/client/formy.mjs
+var NonEmptyString = class extends CustomType {
+  constructor(inner) {
+    super();
+    this.inner = inner;
+  }
+};
+var PositiveInt = class extends CustomType {
+  constructor(inner) {
+    super();
+    this.inner = inner;
+  }
+};
+var NonNegativeFloat = class extends CustomType {
+  constructor(inner) {
+    super();
+    this.inner = inner;
+  }
+};
 var Model = class extends CustomType {
-  constructor(date, customer_id, line_items) {
+  constructor(date, add3, remarks, customer_remarks, customer_id, sales_rep_id, buyer_name, customer_name, ship_via, freight_charge, warehouse_id, line_items, project_name) {
     super();
     this.date = date;
+    this.add = add3;
+    this.remarks = remarks;
+    this.customer_remarks = customer_remarks;
     this.customer_id = customer_id;
+    this.sales_rep_id = sales_rep_id;
+    this.buyer_name = buyer_name;
+    this.customer_name = customer_name;
+    this.ship_via = ship_via;
+    this.freight_charge = freight_charge;
+    this.warehouse_id = warehouse_id;
     this.line_items = line_items;
+    this.project_name = project_name;
   }
 };
 var LineItemForm = class extends CustomType {
-  constructor(item_id, quantity) {
+  constructor(item_id, quantity, unit_price, commission_rate, discount_rate) {
     super();
     this.item_id = item_id;
     this.quantity = quantity;
+    this.unit_price = unit_price;
+    this.commission_rate = commission_rate;
+    this.discount_rate = discount_rate;
   }
 };
 var Form = class extends CustomType {
-  constructor(date, customer_id, line_items) {
+  constructor(date, add3, remarks, customer_remarks, customer_id, sales_rep_id, buyer_name, customer_name, ship_via, freight_charge, warehouse_id, line_items, project_name) {
     super();
     this.date = date;
+    this.add = add3;
+    this.remarks = remarks;
+    this.customer_remarks = customer_remarks;
     this.customer_id = customer_id;
+    this.sales_rep_id = sales_rep_id;
+    this.buyer_name = buyer_name;
+    this.customer_name = customer_name;
+    this.ship_via = ship_via;
+    this.freight_charge = freight_charge;
+    this.warehouse_id = warehouse_id;
     this.line_items = line_items;
+    this.project_name = project_name;
   }
 };
 var LineItem = class extends CustomType {
-  constructor(item_id, quantity) {
+  constructor(item_id, quantity, unit_price, commission_rate, discount_rate) {
     super();
     this.item_id = item_id;
     this.quantity = quantity;
+    this.unit_price = unit_price;
+    this.commission_rate = commission_rate;
+    this.discount_rate = discount_rate;
   }
 };
 var Field = class extends CustomType {
@@ -5171,39 +5329,7 @@ var Field = class extends CustomType {
     this.parsed_value = parsed_value;
   }
 };
-var DateMsg = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
-};
-var CustomerIdMsg = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
-};
-var ItemIdMsg = class extends CustomType {
-  constructor(x0, x1) {
-    super();
-    this[0] = x0;
-    this[1] = x1;
-  }
-};
-var QuantityMsg = class extends CustomType {
-  constructor(x0, x1) {
-    super();
-    this[0] = x0;
-    this[1] = x1;
-  }
-};
 var UserClickedSave = class extends CustomType {
-};
-var UserUpdatedField = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
 };
 var UserAddedLineItem = class extends CustomType {
 };
@@ -5213,22 +5339,188 @@ var UserRemovedLineItem = class extends CustomType {
     this[0] = x0;
   }
 };
+var UserUpdatedDate = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedCustomerId = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedShipVia = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedWarehouseId = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedFreightCharge = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedProjectName = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedAdd = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedRemarks = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedCustomerRemarks = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedSalesRepId = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedBuyerName = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedCustomerName = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedItemId = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+var UserUpdatedQuantity = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+var UserUpdatedCommissionRate = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+var UserUpdatedUnitPrice = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+var UserUpdatedDiscountRate = class extends CustomType {
+  constructor(x0, x1) {
+    super();
+    this[0] = x0;
+    this[1] = x1;
+  }
+};
+function non_negative_float_new(float4) {
+  let $ = float4 < 0;
+  if ($) {
+    let _pipe = "Must be greater than or equal to 0";
+    return new Error(_pipe);
+  } else {
+    let _pipe = float4;
+    let _pipe$1 = new NonNegativeFloat(_pipe);
+    return new Ok(_pipe$1);
+  }
+}
+function encode_date(date) {
+  let year = date.year;
+  let month = date.month;
+  let day = date.day;
+  return object2(
+    toList([
+      ["year", int3(year)],
+      [
+        "month",
+        (() => {
+          let _pipe = month;
+          let _pipe$1 = month_to_int(_pipe);
+          return int3(_pipe$1);
+        })()
+      ],
+      ["day", int3(day)]
+    ])
+  );
+}
 function encode_line_item(line_item) {
   let item_id = line_item.item_id;
   let quantity = line_item.quantity;
+  let unit_price = line_item.unit_price;
+  let commission_rate = line_item.commission_rate;
+  let discount_rate = line_item.discount_rate;
   return object2(
-    toList([["item_id", int3(item_id)], ["quantity", int3(quantity)]])
+    toList([
+      ["item_id", int3(item_id.inner)],
+      ["quantity", int3(quantity.inner)],
+      ["unit_price", float2(unit_price.inner)],
+      ["commission_rate", float2(commission_rate.inner)],
+      ["discount_rate", float2(discount_rate.inner)]
+    ])
   );
 }
 function encode_form(form) {
   let date = form.date;
+  let add3 = form.add;
+  let remarks = form.remarks;
+  let customer_remarks = form.customer_remarks;
   let customer_id = form.customer_id;
+  let sales_rep_id = form.sales_rep_id;
+  let buyer_name = form.buyer_name;
+  let customer_name = form.customer_name;
+  let ship_via = form.ship_via;
+  let freight_charge = form.freight_charge;
+  let warehouse_id = form.warehouse_id;
   let line_items = form.line_items;
+  let project_name = form.project_name;
   return object2(
     toList([
-      ["date", string3(date)],
-      ["customer_id", int3(customer_id)],
-      ["line_items", array2(line_items, encode_line_item)]
+      ["date", encode_date(date)],
+      ["add", string3(add3)],
+      ["remarks", string3(remarks)],
+      ["customer_remarks", string3(customer_remarks)],
+      ["customer_id", int3(customer_id.inner)],
+      ["sales_rep_id", int3(sales_rep_id.inner)],
+      ["buyer_name", string3(buyer_name.inner)],
+      ["customer_name", string3(customer_name.inner)],
+      ["ship_via", string3(ship_via.inner)],
+      ["freight_charge", float2(freight_charge.inner)],
+      ["warehouse_id", int3(warehouse_id.inner)],
+      ["line_items", array2(line_items, encode_line_item)],
+      ["project_name", string3(project_name.inner)]
     ])
   );
 }
@@ -5242,6 +5534,17 @@ function get_parsed_value(field2, parse3) {
     return parsed_value;
   }
 }
+function update_parsed_value(field2, fun) {
+  let _record = field2;
+  return new Field(
+    _record.value,
+    (() => {
+      let _pipe = field2;
+      let _pipe$1 = get_parsed_value(_pipe, fun);
+      return new Some(_pipe$1);
+    })()
+  );
+}
 function line_items_dict_to_list(dict2) {
   let _pipe = dict2;
   let _pipe$1 = map_to_list(_pipe);
@@ -5249,92 +5552,243 @@ function line_items_dict_to_list(dict2) {
     return compare2(a2[0], b[0]);
   });
 }
+function new_field() {
+  return new Field("", new None());
+}
 function init2(_) {
-  return [
-    new Model(
-      new Field("", new None()),
-      new Field("", new None()),
-      new_map()
-    ),
-    none()
-  ];
+  let _pipe = new Model(
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_map(),
+    new_field()
+  );
+  return new$7(_pipe, none());
 }
-function date_parse(value2) {
-  let $ = (() => {
-    let _pipe = value2;
-    return is_empty(_pipe);
-  })();
-  if ($) {
-    return new Error("Required");
-  } else {
-    return new Ok(value2);
-  }
-}
-function customer_id_parse(value2) {
-  let $ = (() => {
-    let _pipe = value2;
-    return is_empty(_pipe);
-  })();
+function non_empty_string_parse(value2) {
+  let $ = is_empty(value2);
   if ($) {
     return new Error("Required");
   } else {
     let _pipe = value2;
-    let _pipe$1 = parse_int(_pipe);
-    return replace_error(_pipe$1, "Invalid ID");
+    let _pipe$1 = new NonEmptyString(_pipe);
+    return new Ok(_pipe$1);
   }
 }
-function item_id_parse(value2) {
-  let $ = (() => {
-    let _pipe = value2;
-    return is_empty(_pipe);
-  })();
-  if ($) {
-    return new Error("Required");
-  } else {
-    let _pipe = value2;
-    let _pipe$1 = parse_int(_pipe);
-    return replace_error(_pipe$1, "Invalid integer");
-  }
+function date_parse(string5) {
+  return try$(
+    non_empty_string_parse(string5),
+    (_use0) => {
+      let string$1 = _use0.inner;
+      let _block;
+      let $ = (() => {
+        let _pipe2 = string$1;
+        return split2(_pipe2, "-");
+      })();
+      if ($.hasLength(3)) {
+        let year = $.head;
+        let month = $.tail.head;
+        let day = $.tail.tail.head;
+        _block = try$(
+          parse_int(year),
+          (year2) => {
+            return try$(
+              parse_int(month),
+              (month2) => {
+                return try$(
+                  month_from_int(month2),
+                  (month3) => {
+                    return try$(
+                      parse_int(day),
+                      (day2) => {
+                        return new Ok(new Date2(year2, month3, day2));
+                      }
+                    );
+                  }
+                );
+              }
+            );
+          }
+        );
+      } else {
+        _block = new Error(void 0);
+      }
+      let _pipe = _block;
+      return replace_error(_pipe, "Invalid date");
+    }
+  );
 }
-function quantity_parse(value2) {
-  let $ = (() => {
-    let _pipe = value2;
-    return is_empty(_pipe);
-  })();
-  if ($) {
-    return new Error("Required");
-  } else {
-    let _pipe = value2;
-    let _pipe$1 = parse_int(_pipe);
-    return replace_error(_pipe$1, "Invalid integer");
-  }
+function positive_int_parse(string5) {
+  return try$(
+    (() => {
+      let _pipe = string5;
+      return non_empty_string_parse(_pipe);
+    })(),
+    (_use0) => {
+      let string$1 = _use0.inner;
+      return try$(
+        (() => {
+          let _pipe = string$1;
+          let _pipe$1 = parse_int(_pipe);
+          return replace_error(_pipe$1, "Must be an integer");
+        })(),
+        (int5) => {
+          let $ = int5 > 0;
+          if ($) {
+            let _pipe = int5;
+            let _pipe$1 = new PositiveInt(_pipe);
+            return new Ok(_pipe$1);
+          } else {
+            let _pipe = "Must be greater than 0";
+            return new Error(_pipe);
+          }
+        }
+      );
+    }
+  );
+}
+function new_line_item_form() {
+  return new LineItemForm(
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field()
+  );
+}
+function update_line_item(model, update4, fun) {
+  let line_items = model.line_items;
+  let _block;
+  let _pipe = line_items;
+  _block = upsert(
+    _pipe,
+    update4,
+    (line_item) => {
+      let _pipe$1 = line_item;
+      let _pipe$2 = lazy_unwrap(_pipe$1, new_line_item_form);
+      return fun(_pipe$2);
+    }
+  );
+  let line_items$1 = _block;
+  let _record = model;
+  return new Model(
+    _record.date,
+    _record.add,
+    _record.remarks,
+    _record.customer_remarks,
+    _record.customer_id,
+    _record.sales_rep_id,
+    _record.buyer_name,
+    _record.customer_name,
+    _record.ship_via,
+    _record.freight_charge,
+    _record.warehouse_id,
+    line_items$1,
+    _record.project_name
+  );
+}
+function non_negative_float_parse(string5) {
+  return try$(
+    (() => {
+      let _pipe = string5;
+      return non_empty_string_parse(_pipe);
+    })(),
+    (_use0) => {
+      let string$1 = _use0.inner;
+      return try$(
+        (() => {
+          let _pipe = string$1;
+          let _pipe$1 = parse_float(_pipe);
+          let _pipe$2 = try_recover(
+            _pipe$1,
+            (_) => {
+              let _pipe$22 = string$1;
+              let _pipe$3 = parse_int(_pipe$22);
+              return map4(_pipe$3, identity);
+            }
+          );
+          return replace_error(_pipe$2, "Must be a number");
+        })(),
+        (float4) => {
+          let _pipe = float4;
+          return non_negative_float_new(_pipe);
+        }
+      );
+    }
+  );
 }
 function update_values(model) {
   let date = model.date;
+  let add3 = model.add;
+  let remarks = model.remarks;
+  let customer_remarks = model.customer_remarks;
   let customer_id = model.customer_id;
+  let sales_rep_id = model.sales_rep_id;
+  let buyer_name = model.buyer_name;
+  let customer_name = model.customer_name;
+  let ship_via = model.ship_via;
+  let freight_charge = model.freight_charge;
+  let warehouse_id = model.warehouse_id;
   let line_items = model.line_items;
+  let project_name = model.project_name;
   return new Model(
     (() => {
-      let _record = date;
-      return new Field(
-        _record.value,
-        (() => {
-          let _pipe = date;
-          let _pipe$1 = get_parsed_value(_pipe, date_parse);
-          return new Some(_pipe$1);
-        })()
-      );
+      let _pipe = date;
+      return update_parsed_value(_pipe, date_parse);
     })(),
     (() => {
-      let _record = customer_id;
-      return new Field(
-        _record.value,
-        (() => {
-          let _pipe = customer_id;
-          let _pipe$1 = get_parsed_value(_pipe, customer_id_parse);
-          return new Some(_pipe$1);
-        })()
-      );
+      let _pipe = add3;
+      return update_parsed_value(_pipe, (var0) => {
+        return new Ok(var0);
+      });
+    })(),
+    (() => {
+      let _pipe = remarks;
+      return update_parsed_value(_pipe, (var0) => {
+        return new Ok(var0);
+      });
+    })(),
+    (() => {
+      let _pipe = customer_remarks;
+      return update_parsed_value(_pipe, (var0) => {
+        return new Ok(var0);
+      });
+    })(),
+    (() => {
+      let _pipe = customer_id;
+      return update_parsed_value(_pipe, positive_int_parse);
+    })(),
+    (() => {
+      let _pipe = sales_rep_id;
+      return update_parsed_value(_pipe, positive_int_parse);
+    })(),
+    (() => {
+      let _pipe = buyer_name;
+      return update_parsed_value(_pipe, non_empty_string_parse);
+    })(),
+    (() => {
+      let _pipe = customer_name;
+      return update_parsed_value(_pipe, non_empty_string_parse);
+    })(),
+    (() => {
+      let _pipe = ship_via;
+      return update_parsed_value(_pipe, non_empty_string_parse);
+    })(),
+    (() => {
+      let _pipe = freight_charge;
+      return update_parsed_value(_pipe, non_negative_float_parse);
+    })(),
+    (() => {
+      let _pipe = warehouse_id;
+      return update_parsed_value(_pipe, positive_int_parse);
     })(),
     (() => {
       let _pipe = line_items;
@@ -5343,39 +5797,54 @@ function update_values(model) {
         (_, line_item) => {
           let item_id = line_item.item_id;
           let quantity = line_item.quantity;
+          let unit_price = line_item.unit_price;
+          let commission_rate = line_item.commission_rate;
+          let discount_rate = line_item.discount_rate;
           return new LineItemForm(
             (() => {
-              let _record = item_id;
-              return new Field(
-                _record.value,
-                (() => {
-                  let _pipe$1 = item_id;
-                  let _pipe$2 = get_parsed_value(_pipe$1, item_id_parse);
-                  return new Some(_pipe$2);
-                })()
-              );
+              let _pipe$1 = item_id;
+              return update_parsed_value(_pipe$1, positive_int_parse);
             })(),
             (() => {
-              let _record = quantity;
-              return new Field(
-                _record.value,
-                (() => {
-                  let _pipe$1 = quantity;
-                  let _pipe$2 = get_parsed_value(_pipe$1, quantity_parse);
-                  return new Some(_pipe$2);
-                })()
-              );
+              let _pipe$1 = quantity;
+              return update_parsed_value(_pipe$1, positive_int_parse);
+            })(),
+            (() => {
+              let _pipe$1 = unit_price;
+              return update_parsed_value(_pipe$1, non_negative_float_parse);
+            })(),
+            (() => {
+              let _pipe$1 = commission_rate;
+              return update_parsed_value(_pipe$1, non_negative_float_parse);
+            })(),
+            (() => {
+              let _pipe$1 = discount_rate;
+              return update_parsed_value(_pipe$1, non_negative_float_parse);
             })()
           );
         }
       );
+    })(),
+    (() => {
+      let _pipe = project_name;
+      return update_parsed_value(_pipe, non_empty_string_parse);
     })()
   );
 }
 function model_to_form(model) {
   let date = model.date;
+  let add3 = model.add;
+  let remarks = model.remarks;
+  let customer_remarks = model.customer_remarks;
   let customer_id = model.customer_id;
+  let sales_rep_id = model.sales_rep_id;
+  let buyer_name = model.buyer_name;
+  let customer_name = model.customer_name;
+  let ship_via = model.ship_via;
+  let freight_charge = model.freight_charge;
+  let warehouse_id = model.warehouse_id;
   let line_items = model.line_items;
+  let project_name = model.project_name;
   return try$(
     (() => {
       let _pipe = date;
@@ -5384,43 +5853,216 @@ function model_to_form(model) {
     (date2) => {
       return try$(
         (() => {
-          let _pipe = customer_id;
-          return get_parsed_value(_pipe, customer_id_parse);
+          let _pipe = add3;
+          return get_parsed_value(_pipe, (var0) => {
+            return new Ok(var0);
+          });
         })(),
-        (customer_id2) => {
+        (add4) => {
           return try$(
             (() => {
-              let _pipe = line_items;
-              let _pipe$1 = line_items_dict_to_list(_pipe);
-              return try_map(
-                _pipe$1,
-                (pair) => {
-                  let item_id = pair[1].item_id;
-                  let quantity = pair[1].quantity;
+              let _pipe = remarks;
+              return get_parsed_value(_pipe, (var0) => {
+                return new Ok(var0);
+              });
+            })(),
+            (remarks2) => {
+              return try$(
+                (() => {
+                  let _pipe = customer_remarks;
+                  return get_parsed_value(
+                    _pipe,
+                    (var0) => {
+                      return new Ok(var0);
+                    }
+                  );
+                })(),
+                (customer_remarks2) => {
                   return try$(
                     (() => {
-                      let _pipe$2 = item_id;
-                      return get_parsed_value(_pipe$2, item_id_parse);
+                      let _pipe = customer_id;
+                      return get_parsed_value(_pipe, positive_int_parse);
                     })(),
-                    (item_id2) => {
+                    (customer_id2) => {
                       return try$(
                         (() => {
-                          let _pipe$2 = quantity;
-                          return get_parsed_value(_pipe$2, quantity_parse);
+                          let _pipe = sales_rep_id;
+                          return get_parsed_value(_pipe, positive_int_parse);
                         })(),
-                        (quantity2) => {
-                          let _pipe$2 = new LineItem(item_id2, quantity2);
-                          return new Ok(_pipe$2);
+                        (sales_rep_id2) => {
+                          return try$(
+                            (() => {
+                              let _pipe = buyer_name;
+                              return get_parsed_value(
+                                _pipe,
+                                non_empty_string_parse
+                              );
+                            })(),
+                            (buyer_name2) => {
+                              return try$(
+                                (() => {
+                                  let _pipe = customer_name;
+                                  return get_parsed_value(
+                                    _pipe,
+                                    non_empty_string_parse
+                                  );
+                                })(),
+                                (customer_name2) => {
+                                  return try$(
+                                    (() => {
+                                      let _pipe = ship_via;
+                                      return get_parsed_value(
+                                        _pipe,
+                                        non_empty_string_parse
+                                      );
+                                    })(),
+                                    (ship_via2) => {
+                                      return try$(
+                                        (() => {
+                                          let _pipe = freight_charge;
+                                          return get_parsed_value(
+                                            _pipe,
+                                            non_negative_float_parse
+                                          );
+                                        })(),
+                                        (freight_charge2) => {
+                                          return try$(
+                                            (() => {
+                                              let _pipe = warehouse_id;
+                                              return get_parsed_value(
+                                                _pipe,
+                                                positive_int_parse
+                                              );
+                                            })(),
+                                            (warehouse_id2) => {
+                                              return try$(
+                                                (() => {
+                                                  let _pipe = project_name;
+                                                  return get_parsed_value(
+                                                    _pipe,
+                                                    non_empty_string_parse
+                                                  );
+                                                })(),
+                                                (project_name2) => {
+                                                  return try$(
+                                                    (() => {
+                                                      let _pipe = line_items;
+                                                      let _pipe$1 = line_items_dict_to_list(
+                                                        _pipe
+                                                      );
+                                                      return try_map(
+                                                        _pipe$1,
+                                                        (pair) => {
+                                                          let item_id = pair[1].item_id;
+                                                          let quantity = pair[1].quantity;
+                                                          let unit_price = pair[1].unit_price;
+                                                          let commission_rate = pair[1].commission_rate;
+                                                          let discount_rate = pair[1].discount_rate;
+                                                          return try$(
+                                                            (() => {
+                                                              let _pipe$2 = item_id;
+                                                              return get_parsed_value(
+                                                                _pipe$2,
+                                                                positive_int_parse
+                                                              );
+                                                            })(),
+                                                            (item_id2) => {
+                                                              return try$(
+                                                                (() => {
+                                                                  let _pipe$2 = quantity;
+                                                                  return get_parsed_value(
+                                                                    _pipe$2,
+                                                                    positive_int_parse
+                                                                  );
+                                                                })(),
+                                                                (quantity2) => {
+                                                                  return try$(
+                                                                    (() => {
+                                                                      let _pipe$2 = unit_price;
+                                                                      return get_parsed_value(
+                                                                        _pipe$2,
+                                                                        non_negative_float_parse
+                                                                      );
+                                                                    })(),
+                                                                    (unit_price2) => {
+                                                                      return try$(
+                                                                        (() => {
+                                                                          let _pipe$2 = commission_rate;
+                                                                          return get_parsed_value(
+                                                                            _pipe$2,
+                                                                            non_negative_float_parse
+                                                                          );
+                                                                        })(),
+                                                                        (commission_rate2) => {
+                                                                          return try$(
+                                                                            (() => {
+                                                                              let _pipe$2 = discount_rate;
+                                                                              return get_parsed_value(
+                                                                                _pipe$2,
+                                                                                non_negative_float_parse
+                                                                              );
+                                                                            })(),
+                                                                            (discount_rate2) => {
+                                                                              let _pipe$2 = new LineItem(
+                                                                                item_id2,
+                                                                                quantity2,
+                                                                                unit_price2,
+                                                                                commission_rate2,
+                                                                                discount_rate2
+                                                                              );
+                                                                              return new Ok(
+                                                                                _pipe$2
+                                                                              );
+                                                                            }
+                                                                          );
+                                                                        }
+                                                                      );
+                                                                    }
+                                                                  );
+                                                                }
+                                                              );
+                                                            }
+                                                          );
+                                                        }
+                                                      );
+                                                    })(),
+                                                    (line_items2) => {
+                                                      let _pipe = new Form(
+                                                        date2,
+                                                        add4,
+                                                        remarks2,
+                                                        customer_remarks2,
+                                                        customer_id2,
+                                                        sales_rep_id2,
+                                                        buyer_name2,
+                                                        customer_name2,
+                                                        ship_via2,
+                                                        freight_charge2,
+                                                        warehouse_id2,
+                                                        line_items2,
+                                                        project_name2
+                                                      );
+                                                      return new Ok(_pipe);
+                                                    }
+                                                  );
+                                                }
+                                              );
+                                            }
+                                          );
+                                        }
+                                      );
+                                    }
+                                  );
+                                }
+                              );
+                            }
+                          );
                         }
                       );
                     }
                   );
                 }
               );
-            })(),
-            (line_items2) => {
-              let _pipe = new Form(date2, customer_id2, line_items2);
-              return new Ok(_pipe);
             }
           );
         }
@@ -5444,13 +6086,7 @@ function view_input(name2, type_2, on_input2, field2) {
           type_(type_2),
           id(name2),
           name(name2),
-          on_input(
-            (value3) => {
-              let _pipe = value3;
-              let _pipe$1 = on_input2(_pipe);
-              return new UserUpdatedField(_pipe$1);
-            }
-          ),
+          on_input(on_input2),
           value(value2)
         ])
       ),
@@ -5482,21 +6118,116 @@ function view_input(name2, type_2, on_input2, field2) {
 }
 function view2(model) {
   let date = model.date;
+  let add3 = model.add;
+  let remarks = model.remarks;
+  let customer_remarks = model.customer_remarks;
   let customer_id = model.customer_id;
+  let sales_rep_id = model.sales_rep_id;
+  let buyer_name = model.buyer_name;
+  let customer_name = model.customer_name;
+  let ship_via = model.ship_via;
+  let freight_charge = model.freight_charge;
+  let warehouse_id = model.warehouse_id;
   let line_items = model.line_items;
+  let project_name = model.project_name;
   return div(
     toList([]),
     toList([
-      view_input("date", "date", (var0) => {
-        return new DateMsg(var0);
-      }, date),
+      view_input(
+        "date",
+        "date",
+        (var0) => {
+          return new UserUpdatedDate(var0);
+        },
+        date
+      ),
+      view_input(
+        "add",
+        "text",
+        (var0) => {
+          return new UserUpdatedAdd(var0);
+        },
+        add3
+      ),
+      view_input(
+        "remarks",
+        "text",
+        (var0) => {
+          return new UserUpdatedRemarks(var0);
+        },
+        remarks
+      ),
+      view_input(
+        "customer_remarks",
+        "text",
+        (var0) => {
+          return new UserUpdatedCustomerRemarks(var0);
+        },
+        customer_remarks
+      ),
       view_input(
         "customer_id",
         "text",
         (var0) => {
-          return new CustomerIdMsg(var0);
+          return new UserUpdatedCustomerId(var0);
         },
         customer_id
+      ),
+      view_input(
+        "sales_rep_id",
+        "text",
+        (var0) => {
+          return new UserUpdatedSalesRepId(var0);
+        },
+        sales_rep_id
+      ),
+      view_input(
+        "buyer_name",
+        "text",
+        (var0) => {
+          return new UserUpdatedBuyerName(var0);
+        },
+        buyer_name
+      ),
+      view_input(
+        "customer_name",
+        "text",
+        (var0) => {
+          return new UserUpdatedCustomerName(var0);
+        },
+        customer_name
+      ),
+      view_input(
+        "ship_via",
+        "text",
+        (var0) => {
+          return new UserUpdatedShipVia(var0);
+        },
+        ship_via
+      ),
+      view_input(
+        "freight_charge",
+        "text",
+        (var0) => {
+          return new UserUpdatedFreightCharge(var0);
+        },
+        freight_charge
+      ),
+      view_input(
+        "warehouse_id",
+        "text",
+        (var0) => {
+          return new UserUpdatedWarehouseId(var0);
+        },
+        warehouse_id
+      ),
+      view_input(
+        "project_name",
+        "text",
+        (var0) => {
+          return new UserUpdatedProjectName(var0);
+        },
+        project_name
       ),
       div(
         toList([]),
@@ -5512,6 +6243,9 @@ function view2(model) {
                   let line_num = line_item[0];
                   let item_id = line_item[1].item_id;
                   let quantity = line_item[1].quantity;
+                  let unit_price = line_item[1].unit_price;
+                  let commission_rate = line_item[1].commission_rate;
+                  let discount_rate = line_item[1].discount_rate;
                   return [
                     to_string(line_num),
                     div(
@@ -5521,7 +6255,7 @@ function view2(model) {
                           "item_id",
                           "text",
                           (_capture) => {
-                            return new ItemIdMsg(line_num, _capture);
+                            return new UserUpdatedItemId(line_num, _capture);
                           },
                           item_id
                         ),
@@ -5529,9 +6263,39 @@ function view2(model) {
                           "quantity",
                           "text",
                           (_capture) => {
-                            return new QuantityMsg(line_num, _capture);
+                            return new UserUpdatedQuantity(line_num, _capture);
                           },
                           quantity
+                        ),
+                        view_input(
+                          "unit_price",
+                          "text",
+                          (_capture) => {
+                            return new UserUpdatedUnitPrice(line_num, _capture);
+                          },
+                          unit_price
+                        ),
+                        view_input(
+                          "commission_rate",
+                          "text",
+                          (_capture) => {
+                            return new UserUpdatedCommissionRate(
+                              line_num,
+                              _capture
+                            );
+                          },
+                          commission_rate
+                        ),
+                        view_input(
+                          "discount_rate",
+                          "text",
+                          (_capture) => {
+                            return new UserUpdatedDiscountRate(
+                              line_num,
+                              _capture
+                            );
+                          },
+                          discount_rate
                         ),
                         button(
                           toList([
@@ -5584,97 +6348,114 @@ function update2(model, msg) {
     _block$1 = lazy_unwrap2(_pipe$3, none);
     let effect = _block$1;
     return [model$1, effect];
-  } else if (msg instanceof UserUpdatedField) {
-    let field_update = msg[0];
-    if (field_update instanceof DateMsg) {
-      let value2 = field_update[0];
-      let _block;
-      let _pipe = value2;
-      let _pipe$1 = date_parse(_pipe);
-      _block = new Some(_pipe$1);
-      let parsed_value = _block;
-      let date = new Field(value2, parsed_value);
-      let _block$1;
-      let _record = model;
-      _block$1 = new Model(date, _record.customer_id, _record.line_items);
-      let model$1 = _block$1;
-      return [model$1, none()];
-    } else if (field_update instanceof CustomerIdMsg) {
-      let value2 = field_update[0];
-      let _block;
-      let _pipe = value2;
-      let _pipe$1 = customer_id_parse(_pipe);
-      _block = new Some(_pipe$1);
-      let parsed_value = _block;
-      let customer_id = new Field(value2, parsed_value);
-      let _block$1;
-      let _record = model;
-      _block$1 = new Model(_record.date, customer_id, _record.line_items);
-      let model$1 = _block$1;
-      return [model$1, none()];
-    } else if (field_update instanceof ItemIdMsg) {
-      let line_num = field_update[0];
-      let value2 = field_update[1];
-      let line_items = model.line_items;
-      let _block;
-      let _pipe = value2;
-      let _pipe$1 = item_id_parse(_pipe);
-      _block = new Some(_pipe$1);
-      let parsed_value = _block;
-      let item_id = new Field(value2, parsed_value);
-      let _block$1;
-      let _pipe$2 = line_items;
-      _block$1 = upsert(
-        _pipe$2,
-        line_num,
-        (line_item) => {
-          if (line_item instanceof None) {
-            return new LineItemForm(item_id, new Field("", new None()));
-          } else {
-            let line_item$1 = line_item[0];
-            let _record2 = line_item$1;
-            return new LineItemForm(item_id, _record2.quantity);
-          }
-        }
-      );
-      let line_items$1 = _block$1;
-      let _block$2;
-      let _record = model;
-      _block$2 = new Model(_record.date, _record.customer_id, line_items$1);
-      let model$1 = _block$2;
-      return [model$1, none()];
-    } else {
-      let line_num = field_update[0];
-      let value2 = field_update[1];
-      let line_items = model.line_items;
-      let _block;
-      let _pipe = value2;
-      let _pipe$1 = quantity_parse(_pipe);
-      _block = new Some(_pipe$1);
-      let parsed_value = _block;
-      let quantity = new Field(value2, parsed_value);
-      let _block$1;
-      let _pipe$2 = line_items;
-      _block$1 = upsert(
-        _pipe$2,
-        line_num,
-        (line_item) => {
-          if (line_item instanceof None) {
-            return new LineItemForm(new Field("", new None()), quantity);
-          } else {
-            let line_item$1 = line_item[0];
-            let _record2 = line_item$1;
-            return new LineItemForm(_record2.item_id, quantity);
-          }
-        }
-      );
-      let line_items$1 = _block$1;
-      let _block$2;
-      let _record = model;
-      _block$2 = new Model(_record.date, _record.customer_id, line_items$1);
-      let model$1 = _block$2;
-      return [model$1, none()];
-    }
+  } else if (msg instanceof UserUpdatedDate) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = date_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedCustomerId) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = positive_int_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedItemId) {
+    let line_num = msg[0];
+    let value2 = msg[1];
+    let _pipe = model;
+    let _pipe$1 = update_line_item(
+      _pipe,
+      line_num,
+      (line_item) => {
+        let _record = line_item;
+        return new LineItemForm(
+          new Field(
+            value2,
+            (() => {
+              let _pipe$12 = value2;
+              let _pipe$2 = positive_int_parse(_pipe$12);
+              return new Some(_pipe$2);
+            })()
+          ),
+          _record.quantity,
+          _record.unit_price,
+          _record.commission_rate,
+          _record.discount_rate
+        );
+      }
+    );
+    return new$7(_pipe$1, none());
+  } else if (msg instanceof UserUpdatedQuantity) {
+    let line_num = msg[0];
+    let value2 = msg[1];
+    let _pipe = model;
+    let _pipe$1 = update_line_item(
+      _pipe,
+      line_num,
+      (line_item) => {
+        let _record = line_item;
+        return new LineItemForm(
+          _record.item_id,
+          new Field(
+            value2,
+            (() => {
+              let _pipe$12 = value2;
+              let _pipe$2 = positive_int_parse(_pipe$12);
+              return new Some(_pipe$2);
+            })()
+          ),
+          _record.unit_price,
+          _record.commission_rate,
+          _record.discount_rate
+        );
+      }
+    );
+    return new$7(_pipe$1, none());
   } else if (msg instanceof UserAddedLineItem) {
     let line_items = model.line_items;
     let _block;
@@ -5685,21 +6466,28 @@ function update2(model, msg) {
     let max_line_num = _block;
     let _block$1;
     let _pipe$3 = line_items;
-    _block$1 = insert(
-      _pipe$3,
-      max_line_num + 1,
-      new LineItemForm(
-        new Field("", new None()),
-        new Field("", new None())
-      )
-    );
+    _block$1 = insert(_pipe$3, max_line_num + 1, new_line_item_form());
     let line_items$1 = _block$1;
     let _block$2;
     let _record = model;
-    _block$2 = new Model(_record.date, _record.customer_id, line_items$1);
-    let model$1 = _block$2;
-    return [model$1, none()];
-  } else {
+    _block$2 = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      line_items$1,
+      _record.project_name
+    );
+    let _pipe$4 = _block$2;
+    return new$7(_pipe$4, none());
+  } else if (msg instanceof UserRemovedLineItem) {
     let line_num = msg[0];
     let line_items = model.line_items;
     let _block;
@@ -5708,9 +6496,381 @@ function update2(model, msg) {
     let line_items$1 = _block;
     let _block$1;
     let _record = model;
-    _block$1 = new Model(_record.date, _record.customer_id, line_items$1);
-    let model$1 = _block$1;
-    return [model$1, none()];
+    _block$1 = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      line_items$1,
+      _record.project_name
+    );
+    let _pipe$1 = _block$1;
+    return new$7(_pipe$1, none());
+  } else if (msg instanceof UserUpdatedShipVia) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = non_empty_string_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedWarehouseId) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = positive_int_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedFreightCharge) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = non_negative_float_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedProjectName) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = non_empty_string_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      )
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedAdd) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = new Ok(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedRemarks) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = new Ok(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedCustomerRemarks) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = new Ok(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedSalesRepId) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = positive_int_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.buyer_name,
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedBuyerName) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = non_empty_string_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.customer_name,
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedCustomerName) {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model(
+      _record.date,
+      _record.add,
+      _record.remarks,
+      _record.customer_remarks,
+      _record.customer_id,
+      _record.sales_rep_id,
+      _record.buyer_name,
+      new Field(
+        value2,
+        (() => {
+          let _pipe2 = value2;
+          let _pipe$1 = non_empty_string_parse(_pipe2);
+          return new Some(_pipe$1);
+        })()
+      ),
+      _record.ship_via,
+      _record.freight_charge,
+      _record.warehouse_id,
+      _record.line_items,
+      _record.project_name
+    );
+    let _pipe = _block;
+    return new$7(_pipe, none());
+  } else if (msg instanceof UserUpdatedCommissionRate) {
+    let line_num = msg[0];
+    let value2 = msg[1];
+    let _pipe = model;
+    let _pipe$1 = update_line_item(
+      _pipe,
+      line_num,
+      (line_item) => {
+        let _record = line_item;
+        return new LineItemForm(
+          _record.item_id,
+          _record.quantity,
+          _record.unit_price,
+          new Field(
+            value2,
+            (() => {
+              let _pipe$12 = value2;
+              let _pipe$2 = non_negative_float_parse(_pipe$12);
+              return new Some(_pipe$2);
+            })()
+          ),
+          _record.discount_rate
+        );
+      }
+    );
+    return new$7(_pipe$1, none());
+  } else if (msg instanceof UserUpdatedDiscountRate) {
+    let line_num = msg[0];
+    let value2 = msg[1];
+    let _pipe = model;
+    let _pipe$1 = update_line_item(
+      _pipe,
+      line_num,
+      (line_item) => {
+        let _record = line_item;
+        return new LineItemForm(
+          _record.item_id,
+          _record.quantity,
+          _record.unit_price,
+          _record.commission_rate,
+          new Field(
+            value2,
+            (() => {
+              let _pipe$12 = value2;
+              let _pipe$2 = non_negative_float_parse(_pipe$12);
+              return new Some(_pipe$2);
+            })()
+          )
+        );
+      }
+    );
+    return new$7(_pipe$1, none());
+  } else {
+    let line_num = msg[0];
+    let value2 = msg[1];
+    let _pipe = model;
+    let _pipe$1 = update_line_item(
+      _pipe,
+      line_num,
+      (line_item) => {
+        let _record = line_item;
+        return new LineItemForm(
+          _record.item_id,
+          _record.quantity,
+          new Field(
+            value2,
+            (() => {
+              let _pipe$12 = value2;
+              let _pipe$2 = non_negative_float_parse(_pipe$12);
+              return new Some(_pipe$2);
+            })()
+          ),
+          _record.commission_rate,
+          _record.discount_rate
+        );
+      }
+    );
+    return new$7(_pipe$1, none());
   }
 }
 function register() {
