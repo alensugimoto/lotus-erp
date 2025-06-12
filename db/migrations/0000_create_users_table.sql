@@ -3,7 +3,7 @@
 
 -- create_users_table
 create table users (
-    "LogonID" text primary key,
+    "LogonID" text unique not null,
     "Password" text not null,
     "pgORDERS" text not null,
     "pgCUSTOMERS" text not null,
@@ -17,6 +17,10 @@ create table users (
 );
 -- seed_users_table
 \copy users from 'db/seeds/tblUsers.csv' with (format csv, header match)
+
+-- normalize_users_table
+alter table users
+add column id smallint primary key generated always as identity;
 
 -- create_discount_tiers_table
 create table discount_tiers (
@@ -313,3 +317,128 @@ rename column "AvailableToOrder" to available_to_order;
 
 alter table customers
 rename column "Remarks" to remarks;
+
+-- create_transport_types_table
+create table transport_types (
+    "TransportID" smallint unique not null,
+    "TransportName" text not null
+);
+-- seed_transport_types_table
+\copy transport_types from 'db/seeds/tblTransport.csv' with (format csv, header match)
+-- normalize_tranport_types_table
+alter table transport_types
+rename column "TransportName" to name;
+alter table transport_types
+add column id smallint primary key generated always as identity;
+
+-- create_warehoues_table
+create table warehouses (
+    "WarehouseID" text not null,
+    "Type" text not null,
+    "Alias" text not null,
+    "Address_Line_1" text not null,
+    "Address_Line_2" text not null,
+    "Address_Line_3" text
+);
+-- seed_warehouses_table
+\copy warehouses from 'db/seeds/tblWarehouses.csv' with (format csv, header match)
+
+-- create_warehoue_types_table
+create table warehouse_types (
+    id smallint primary key generated always as identity,
+    name text not null
+);
+-- seed_warehouse_types_table
+insert into warehouse_types (name)
+select distinct "Type"
+from warehouses;
+
+-- replace "Type" with type_id
+alter table warehouses
+add column type_id smallint references warehouse_types on delete restrict;
+
+update warehouses
+set type_id = warehouse_types.id
+from warehouse_types
+where warehouses."Type" = warehouse_types.name;
+
+alter table warehouses
+alter column type_id set not null;
+
+alter table warehouses
+drop column "Type";
+
+-- normalize_warehouses_table
+alter table warehouses
+rename column "WarehouseID" to code;
+
+alter table warehouses
+rename column "Alias" to name;
+
+alter table warehouses
+add column id smallint primary key generated always as identity,
+add unique (code);
+
+-- create_item_types_table
+create table item_types (
+    "TypeID" text unique not null,
+    "TypeDescription" text
+);
+-- seed_item_types_table
+\copy item_types from 'db/seeds/tblProductTypes.csv' with (format csv, header match)
+
+-- create_items_table
+create table items (
+    "ModelID" text not null,
+    "UPCCode" text,
+    "Description" text,
+    "SpecSheet" text,
+    "WeightLBS" numeric,
+    "WeightKG" numeric,
+    "SortOrder" text not null,
+    "RestockVAN" smallint,
+    "RestockTOR" smallint,
+    "RestockNAP" smallint,
+    "RestockPHI" smallint,
+    "RestockSEA" smallint,
+    "TypeID" text references item_types ("TypeID") on delete restrict not null,
+    "Royalty" boolean not null,
+    "CreatedBy" text,
+    "CreatedWhen" timestamptz,
+    "UpdatedBy" text,
+    "UpdatedWhen" timestamptz
+);
+-- seed_item_types_table
+\copy items from 'db/seeds/tblProducts.csv' with (format csv, header match)
+
+-- normalize_item_types_table
+alter table item_types
+add column id smallint primary key generated always as identity;
+
+alter table item_types
+rename "TypeID" to name;
+
+alter table item_types
+rename constraint "item_types_TypeID_key" to item_types_name_key;
+
+alter table item_types
+rename "TypeDescription" to description;
+
+-- replace "TypeID" with type_id
+alter table items
+add column type_id smallint references item_types on delete restrict;
+
+update items
+set type_id = item_types.id
+from item_types
+where items."TypeID" = item_types.name;
+
+alter table items
+drop column "TypeID";
+
+-- normalize_items_table
+alter table items
+add column id integer primary key generated always as identity;
+
+alter table items
+rename "ModelID" to name;
