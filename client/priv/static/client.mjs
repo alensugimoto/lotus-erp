@@ -6133,6 +6133,10 @@ function view2(model) {
   return div(
     toList([]),
     toList([
+      element3(
+        toList([route("/ws/combobox")]),
+        toList([])
+      ),
       view_input(
         "date",
         "date",

@@ -1,4 +1,5 @@
 import client
+import components/combobox
 import counter
 import envoy
 import gleam/bytes_tree
@@ -44,6 +45,7 @@ type Resource {
   Dev
   Asset(priv: String, src: String, doc_type: DocumentType)
   CounterComponent
+  Combobox
 }
 
 type DocumentType {
@@ -76,7 +78,7 @@ fn get_resources() -> dict.Dict(List(String), Resource) {
     })
 
   let websockets =
-    [#([], Dev), #(["counter"], CounterComponent)]
+    [#([], Dev), #(["counter"], CounterComponent), #(["combobox"], Combobox)]
     |> list.map(pair.map_first(_, fn(path_segs) { ["ws", ..path_segs] }))
 
   let resources = list.append(assets, websockets)
@@ -138,6 +140,7 @@ fn handle_get_request(
         )
       CounterComponent ->
         start_component(req:, app: counter.component, with: ctx.db)
+      Combobox -> start_component(req:, app: combobox.component, with: ctx.db)
     }
   })
   |> result.unwrap(

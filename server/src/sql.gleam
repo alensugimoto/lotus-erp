@@ -1,6 +1,47 @@
 import gleam/dynamic/decode
 import pog
 
+/// A row you get from running the `list_customers` query
+/// defined in `./src/sql/list_customers.sql`.
+///
+/// > 🐿️ This type definition was generated automatically using v3.0.4 of the
+/// > [squirrel package](https://github.com/giacomocavalieri/squirrel).
+///
+pub type ListCustomersRow {
+  ListCustomersRow(id: Int, name: String)
+}
+
+/// Runs the `list_customers` query
+/// defined in `./src/sql/list_customers.sql`.
+///
+/// > 🐿️ This function was generated automatically using v3.0.4 of
+/// > the [squirrel package](https://github.com/giacomocavalieri/squirrel).
+///
+pub fn list_customers(db, arg_1) {
+  let decoder = {
+    use id <- decode.field(0, decode.int)
+    use name <- decode.field(1, decode.string)
+    decode.success(ListCustomersRow(id:, name:))
+  }
+
+  "select
+    id,
+    name
+from
+    customers
+where
+    $1 = '' or
+    code ilike '%' || $1 || '%' or
+    name ilike '%' || $1 || '%'
+limit
+    10;
+"
+  |> pog.query
+  |> pog.parameter(pog.text(arg_1))
+  |> pog.returning(decoder)
+  |> pog.execute(db)
+}
+
 /// A row you get from running the `insert_quote` query
 /// defined in `./src/sql/insert_quote.sql`.
 ///

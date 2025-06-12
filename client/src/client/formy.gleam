@@ -979,6 +979,7 @@ fn view(model: Model) -> Element(Msg) {
   ) = model
 
   html.div([], [
+    server_component.element([server_component.route("/ws/combobox")], []),
     view_input(
       name: "date",
       type_: "date",
