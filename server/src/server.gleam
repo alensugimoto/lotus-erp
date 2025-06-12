@@ -42,29 +42,37 @@ type Context {
 
 type Resource {
   Dev
-  Asset(priv: String, src: String)
+  Asset(priv: String, src: String, doc_type: DocumentType)
   CounterComponent
+}
+
+type DocumentType {
+  JavaScriptModule
+  CascadingStyleSheets
+}
+
+fn doc_type_to_ext(doc_type: DocumentType) -> String {
+  case doc_type {
+    JavaScriptModule -> ".mjs"
+    CascadingStyleSheets -> ".css"
+  }
 }
 
 fn get_resources() -> dict.Dict(List(String), Resource) {
   let assets =
     [
       // NOTE: dev mode
-      #("autoreload", "server"),
-      #("client", "client"),
-      #("lustre-server-component.min", "lustre"),
+      #("autoreload", "server", JavaScriptModule),
+      #("client", "client", JavaScriptModule),
+      #("client", "client", CascadingStyleSheets),
+      #("lustre-server-component.min", "lustre", JavaScriptModule),
     ]
-    |> list.map(
-      pair.map_first(_, fn(file_name) { ["static", file_name <> ".mjs"] }),
-    )
     |> list.map(fn(asset) {
-      pair.map_second(asset, fn(pkg_name) {
-        let assert Ok(priv) = erlang.priv_directory(pkg_name)
-        let src =
-          ["", ..pair.first(asset)]
-          |> string.join(with: "/")
-        Asset(priv:, src:)
-      })
+      let #(file_name, pkg_name, doc_type) = asset
+      let assert Ok(priv) = erlang.priv_directory(pkg_name)
+      let path_segs = ["static", file_name <> doc_type_to_ext(doc_type)]
+      let src = string.join(["", ..path_segs], with: "/")
+      #(path_segs, Asset(priv:, src:, doc_type:))
     })
 
   let websockets =
@@ -119,7 +127,7 @@ fn handle_get_request(
   |> dict.get(request.path_segments(req))
   |> result.then(fn(resource) {
     case resource {
-      Asset(priv:, src:) -> serve_js_file(priv:, src:)
+      Asset(priv:, src:, doc_type:) -> serve_static_file(priv:, src:, doc_type:)
       Dev ->
         // NOTE: dev mode
         start_websocket(
@@ -139,9 +147,10 @@ fn handle_get_request(
   )
 }
 
-fn serve_js_file(
+fn serve_static_file(
   priv priv: String,
   src src: String,
+  doc_type doc_type: DocumentType,
 ) -> Result(Response(ResponseData), Nil) {
   priv
   |> string.append(src)
@@ -149,9 +158,16 @@ fn serve_js_file(
   |> result.map_error(fn(_) { Nil })
   |> result.map(fn(file) {
     response.new(200)
-    |> response.prepend_header("content-type", "application/javascript")
+    |> response.prepend_header("content-type", doc_type_to_mime_type(doc_type))
     |> response.set_body(file)
   })
+}
+
+fn doc_type_to_mime_type(doc_type: DocumentType) -> String {
+  case doc_type {
+    JavaScriptModule -> "text/javascript"
+    CascadingStyleSheets -> "text/css"
+  }
 }
 
 fn start_websocket(
@@ -267,8 +283,10 @@ fn serve_html(uri: Uri, ctx: Context) -> Response(ResponseData) {
           |> dict.values()
           |> list.map(fn(resource) {
             case resource {
-              Asset(src:, ..) ->
+              Asset(src:, doc_type: JavaScriptModule, ..) ->
                 html.script([attribute.type_("module"), attribute.src(src)], "")
+              Asset(src:, doc_type: CascadingStyleSheets, ..) ->
+                html.link([attribute.rel("stylesheet"), attribute.href(src)])
               _ -> element.none()
             }
           }),
