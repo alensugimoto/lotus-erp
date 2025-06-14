@@ -1,6 +1,7 @@
 // IMPORTS ---------------------------------------------------------------------
 
 import client/formy
+import client/ui/combobox
 import gleam/int
 import gleam/list
 import gleam/uri.{type Uri}
@@ -18,6 +19,7 @@ pub fn main() {
   let app = lustre.application(init, update, view)
 
   let assert Ok(_) = formy.register()
+  let assert Ok(_) = combobox.register()
   let assert Ok(_) = lustre.start(app, "#app", Nil)
 
   Nil

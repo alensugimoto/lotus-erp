@@ -1,8 +1,10 @@
+import client/ui/combobox
+import gleam/int
+import gleam/json
 import gleam/list
 import gleam/pair
 import gleam/result
 import lustre.{type App}
-import lustre/attribute
 import lustre/component
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
@@ -20,26 +22,30 @@ pub fn component() -> App(pog.Connection, Model, Msg) {
 // MODEL -----------------------------------------------------------------------
 
 pub type Model {
-  Model(
-    db: pog.Connection,
-    query: String,
-    customers: List(sql.ListCustomersRow),
-  )
+  Model(db: pog.Connection, customers: List(sql.ListCustomersRow))
 }
 
 fn init(db) -> #(Model, Effect(Msg)) {
-  Model(query: "", db:, customers: [])
+  Model(db:, customers: [])
   |> pair.new(effect.none())
 }
 
 // UPDATE ----------------------------------------------------------------------
 
 pub opaque type Msg {
+  UserUpdatedValue(String)
   UserUpdatedQuery(String)
 }
 
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
+    UserUpdatedValue(value) -> {
+      let effect =
+        event.emit("change", json.object([#("value", json.string(value))]))
+
+      #(model, effect)
+    }
+
     UserUpdatedQuery(query) -> {
       let Model(db:, ..) = model
 
@@ -48,7 +54,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       |> result.map(fn(rows) { rows.rows })
       |> result.replace_error([])
       |> result.unwrap_both
-      |> Model(db:, query:)
+      |> Model(db:)
       |> pair.new(effect.none())
     }
   }
@@ -57,19 +63,21 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(query:, customers:, ..) = model
+  let Model(customers:, ..) = model
 
-  html.div([], [
-    html.input([
-      attribute.name("query"),
-      attribute.type_("text"),
-      event.on_input(UserUpdatedQuery),
-      attribute.value(query),
-    ]),
-    html.div(
-      [],
-      customers
-        |> list.map(fn(customer) { html.div([], [html.text(customer.name)]) }),
-    ),
-  ])
+  combobox.element(
+    [combobox.on_query(UserUpdatedQuery), combobox.on_change(UserUpdatedValue)],
+    customers
+      |> list.map(fn(customer) {
+        #(
+          customer.id
+            |> int.to_string,
+          [
+            html.div([], [html.text(customer.name)]),
+            html.div([], [html.text(int.to_string(customer.id))]),
+          ],
+        )
+      })
+      |> list.prepend(#("", [html.text("Please select a customer...")])),
+  )
 }
