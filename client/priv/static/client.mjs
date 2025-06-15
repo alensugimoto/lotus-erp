@@ -258,14 +258,14 @@ function bitArrayByteAt(buffer, bitOffset, index4) {
   }
 }
 var isBitArrayDeprecationMessagePrinted = {};
-function bitArrayPrintDeprecationWarning(name4, message2) {
-  if (isBitArrayDeprecationMessagePrinted[name4]) {
+function bitArrayPrintDeprecationWarning(name3, message2) {
+  if (isBitArrayDeprecationMessagePrinted[name3]) {
     return;
   }
   console.warn(
-    `Deprecated BitArray.${name4} property used in JavaScript FFI code. ${message2}.`
+    `Deprecated BitArray.${name3} property used in JavaScript FFI code. ${message2}.`
   );
-  isBitArrayDeprecationMessagePrinted[name4] = true;
+  isBitArrayDeprecationMessagePrinted[name3] = true;
 }
 var Result = class _Result extends CustomType {
   // @internal
@@ -387,6 +387,14 @@ function from_result(result) {
     return new Some(a2);
   } else {
     return new None();
+  }
+}
+function unwrap(option, default$) {
+  if (option instanceof Some) {
+    let x = option[0];
+    return x;
+  } else {
+    return default$;
   }
 }
 function lazy_unwrap(option, default$) {
@@ -1669,21 +1677,6 @@ function sort(list4, compare5) {
     return merge_all(sequences$1, new Ascending(), compare5);
   }
 }
-function each(loop$list, loop$f) {
-  while (true) {
-    let list4 = loop$list;
-    let f = loop$f;
-    if (list4.hasLength(0)) {
-      return void 0;
-    } else {
-      let first$1 = list4.head;
-      let rest$1 = list4.tail;
-      f(first$1);
-      loop$list = rest$1;
-      loop$f = f;
-    }
-  }
-}
 function last(loop$list) {
   while (true) {
     let list4 = loop$list;
@@ -1869,12 +1862,7 @@ function one_of(first2, alternatives) {
     }
   );
 }
-function decode_error(expected, found) {
-  return toList([
-    new DecodeError(expected, classify_dynamic(found), toList([]))
-  ]);
-}
-function run_dynamic_function(data, name4, f) {
+function run_dynamic_function(data, name3, f) {
   let $ = f(data);
   if ($.isOk()) {
     let data$1 = $[0];
@@ -1883,17 +1871,12 @@ function run_dynamic_function(data, name4, f) {
     let zero = $[0];
     return [
       zero,
-      toList([new DecodeError(name4, classify_dynamic(data), toList([]))])
+      toList([new DecodeError(name3, classify_dynamic(data), toList([]))])
     ];
   }
 }
 function decode_int(data) {
   return run_dynamic_function(data, "Int", int);
-}
-function failure(zero, expected) {
-  return new Decoder((d) => {
-    return [zero, decode_error(expected, d)];
-  });
 }
 var int2 = /* @__PURE__ */ new Decoder(decode_int);
 function decode_string(data) {
@@ -2055,9 +2038,6 @@ function graphemes_iterator(string5) {
     segmenter ||= new Intl.Segmenter();
     return segmenter.segment(string5)[Symbol.iterator]();
   }
-}
-function lowercase(string5) {
-  return string5.toLowerCase();
 }
 function split(xs, pattern) {
   return List.fromArray(xs.split(pattern));
@@ -2253,13 +2233,6 @@ function path_segments(path2) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/bool.mjs
-function to_string2(bool4) {
-  if (!bool4) {
-    return "False";
-  } else {
-    return "True";
-  }
-}
 function guard(requirement, consequence, alternative) {
   if (requirement) {
     return consequence;
@@ -2308,7 +2281,7 @@ function try$(result, fun) {
     return new Error(e);
   }
 }
-function unwrap(result, default$) {
+function unwrap2(result, default$) {
   if (result.isOk()) {
     let v = result[0];
     return v;
@@ -2361,9 +2334,6 @@ function identity3(x) {
 function array(list4) {
   return list4.toArray();
 }
-function do_null() {
-  return null;
-}
 
 // build/dev/javascript/gleam_json/gleam/json.mjs
 function string3(input3) {
@@ -2377,9 +2347,6 @@ function int3(input3) {
 }
 function float2(input3) {
   return identity3(input3);
-}
-function null$() {
-  return do_null();
 }
 function object2(entries) {
   return object(entries);
@@ -2449,26 +2416,26 @@ function compare3(a2, b) {
 
 // build/dev/javascript/lustre/lustre/vdom/vattr.mjs
 var Attribute = class extends CustomType {
-  constructor(kind, name4, value2) {
+  constructor(kind, name3, value2) {
     super();
     this.kind = kind;
-    this.name = name4;
+    this.name = name3;
     this.value = value2;
   }
 };
 var Property = class extends CustomType {
-  constructor(kind, name4, value2) {
+  constructor(kind, name3, value2) {
     super();
     this.kind = kind;
-    this.name = name4;
+    this.name = name3;
     this.value = value2;
   }
 };
 var Event2 = class extends CustomType {
-  constructor(kind, name4, handler, include2, prevent_default, stop_propagation, immediate2, debounce, throttle) {
+  constructor(kind, name3, handler, include2, prevent_default, stop_propagation, immediate2, debounce, throttle) {
     super();
     this.kind = kind;
-    this.name = name4;
+    this.name = name3;
     this.handler = handler;
     this.include = include2;
     this.prevent_default = prevent_default;
@@ -2536,15 +2503,18 @@ function prepare(attributes) {
   }
 }
 var attribute_kind = 0;
-function attribute(name4, value2) {
-  return new Attribute(attribute_kind, name4, value2);
+function attribute(name3, value2) {
+  return new Attribute(attribute_kind, name3, value2);
 }
 var property_kind = 1;
+function property(name3, value2) {
+  return new Property(property_kind, name3, value2);
+}
 var event_kind = 2;
-function event(name4, handler, include2, prevent_default, stop_propagation, immediate2, debounce, throttle) {
+function event(name3, handler, include2, prevent_default, stop_propagation, immediate2, debounce, throttle) {
   return new Event2(
     event_kind,
-    name4,
+    name3,
     handler,
     include2,
     prevent_default,
@@ -2556,11 +2526,24 @@ function event(name4, handler, include2, prevent_default, stop_propagation, imme
 }
 
 // build/dev/javascript/lustre/lustre/attribute.mjs
-function attribute2(name4, value2) {
-  return attribute(name4, value2);
+function attribute2(name3, value2) {
+  return attribute(name3, value2);
 }
-function class$(name4) {
-  return attribute2("class", name4);
+function property2(name3, value2) {
+  return property(name3, value2);
+}
+function boolean_attribute(name3, value2) {
+  if (value2) {
+    return attribute2(name3, "");
+  } else {
+    return property2(name3, bool(false));
+  }
+}
+function autofocus(should_autofocus) {
+  return boolean_attribute("autofocus", should_autofocus);
+}
+function class$(name3) {
+  return attribute2("class", name3);
 }
 function do_classes(loop$names, loop$class) {
   while (true) {
@@ -2584,6 +2567,9 @@ function classes(names) {
 }
 function id(value2) {
   return attribute2("id", value2);
+}
+function popover(value2) {
+  return attribute2("popover", value2);
 }
 function style(property3, value2) {
   if (property3 === "") {
@@ -2632,6 +2618,9 @@ function for$(id2) {
 function name(element_name) {
   return attribute2("name", element_name);
 }
+function popovertarget(id2) {
+  return attribute2("popovertarget", id2);
+}
 function type_(control_type) {
   return attribute2("type", control_type);
 }
@@ -2664,15 +2653,6 @@ function from(effect) {
   let _record = empty;
   return new Effect(toList([task]), _record.before_paint, _record.after_paint);
 }
-function before_paint(effect) {
-  let task = (actions) => {
-    let root3 = actions.root();
-    let dispatch = actions.dispatch;
-    return effect(dispatch, root3);
-  };
-  let _record = empty;
-  return new Effect(_record.synchronous, toList([task]), _record.after_paint);
-}
 function after_paint(effect) {
   let task = (actions) => {
     let root3 = actions.root();
@@ -2682,9 +2662,9 @@ function after_paint(effect) {
   let _record = empty;
   return new Effect(_record.synchronous, _record.before_paint, toList([task]));
 }
-function event2(name4, data) {
+function event2(name3, data) {
   let task = (actions) => {
-    return actions.emit(name4, data);
+    return actions.emit(name3, data);
   };
   let _record = empty;
   return new Effect(toList([task]), _record.before_paint, _record.after_paint);
@@ -2798,14 +2778,14 @@ function do_to_string(loop$path, loop$acc) {
     }
   }
 }
-function to_string3(path2) {
+function to_string2(path2) {
   return do_to_string(path2, toList([]));
 }
 function matches(path2, candidates) {
   if (candidates.hasLength(0)) {
     return false;
   } else {
-    return do_matches(to_string3(path2), candidates);
+    return do_matches(to_string2(path2), candidates);
   }
 }
 var separator_event = "\f";
@@ -3210,10 +3190,10 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
       return new AttributeChange(added, removed, events);
     } else if (old.atLeastLength(1) && old.head instanceof Event2 && new$8.hasLength(0)) {
       let prev = old.head;
-      let name4 = old.head.name;
+      let name3 = old.head.name;
       let old$1 = old.tail;
       let removed$1 = prepend(prev, removed);
-      let events$1 = remove_event(events, path2, name4);
+      let events$1 = remove_event(events, path2, name3);
       loop$controlled = controlled;
       loop$path = path2;
       loop$mapper = mapper;
@@ -3236,11 +3216,11 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
       loop$removed = removed$1;
     } else if (old.hasLength(0) && new$8.atLeastLength(1) && new$8.head instanceof Event2) {
       let next = new$8.head;
-      let name4 = new$8.head.name;
+      let name3 = new$8.head.name;
       let handler = new$8.head.handler;
       let new$1 = new$8.tail;
       let added$1 = prepend(next, added);
-      let events$1 = add_event(events, mapper, path2, name4, handler);
+      let events$1 = add_event(events, mapper, path2, name3, handler);
       loop$controlled = controlled;
       loop$path = path2;
       loop$mapper = mapper;
@@ -3328,7 +3308,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed;
       } else if (prev instanceof Event2 && $ instanceof Eq && next instanceof Event2) {
-        let name4 = next.name;
+        let name3 = next.name;
         let handler = next.handler;
         let has_changes = prev.prevent_default !== next.prevent_default || prev.stop_propagation !== next.stop_propagation || prev.immediate !== next.immediate || prev.debounce !== next.debounce || prev.throttle !== next.throttle;
         let _block;
@@ -3338,7 +3318,7 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
           _block = added;
         }
         let added$1 = _block;
-        let events$1 = add_event(events, mapper, path2, name4, handler);
+        let events$1 = add_event(events, mapper, path2, name3, handler);
         loop$controlled = controlled;
         loop$path = path2;
         loop$mapper = mapper;
@@ -3348,10 +3328,10 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed;
       } else if (prev instanceof Event2 && $ instanceof Eq) {
-        let name4 = prev.name;
+        let name3 = prev.name;
         let added$1 = prepend(next, added);
         let removed$1 = prepend(prev, removed);
-        let events$1 = remove_event(events, path2, name4);
+        let events$1 = remove_event(events, path2, name3);
         loop$controlled = controlled;
         loop$path = path2;
         loop$mapper = mapper;
@@ -3361,11 +3341,11 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed$1;
       } else if ($ instanceof Eq && next instanceof Event2) {
-        let name4 = next.name;
+        let name3 = next.name;
         let handler = next.handler;
         let added$1 = prepend(next, added);
         let removed$1 = prepend(prev, removed);
-        let events$1 = add_event(events, mapper, path2, name4, handler);
+        let events$1 = add_event(events, mapper, path2, name3, handler);
         loop$controlled = controlled;
         loop$path = path2;
         loop$mapper = mapper;
@@ -3386,10 +3366,10 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed$1;
       } else if ($ instanceof Gt && next instanceof Event2) {
-        let name4 = next.name;
+        let name3 = next.name;
         let handler = next.handler;
         let added$1 = prepend(next, added);
-        let events$1 = add_event(events, mapper, path2, name4, handler);
+        let events$1 = add_event(events, mapper, path2, name3, handler);
         loop$controlled = controlled;
         loop$path = path2;
         loop$mapper = mapper;
@@ -3409,9 +3389,9 @@ function diff_attributes(loop$controlled, loop$path, loop$mapper, loop$events, l
         loop$added = added$1;
         loop$removed = removed;
       } else if (prev instanceof Event2 && $ instanceof Lt) {
-        let name4 = prev.name;
+        let name3 = prev.name;
         let removed$1 = prepend(prev, removed);
-        let events$1 = remove_event(events, path2, name4);
+        let events$1 = remove_event(events, path2, name3);
         loop$controlled = controlled;
         loop$path = path2;
         loop$mapper = mapper;
@@ -4022,20 +4002,20 @@ var Reconciler = class {
   }
   #update(node, added, removed) {
     iterate(removed, (attribute3) => {
-      const name4 = attribute3.name;
-      if (node[meta].handlers.has(name4)) {
-        node.removeEventListener(name4, handleEvent);
-        node[meta].handlers.delete(name4);
-        if (node[meta].throttles.has(name4)) {
-          node[meta].throttles.delete(name4);
+      const name3 = attribute3.name;
+      if (node[meta].handlers.has(name3)) {
+        node.removeEventListener(name3, handleEvent);
+        node[meta].handlers.delete(name3);
+        if (node[meta].throttles.has(name3)) {
+          node[meta].throttles.delete(name3);
         }
-        if (node[meta].debouncers.has(name4)) {
-          clearTimeout(node[meta].debouncers.get(name4).timeout);
-          node[meta].debouncers.delete(name4);
+        if (node[meta].debouncers.has(name3)) {
+          clearTimeout(node[meta].debouncers.get(name3).timeout);
+          node[meta].debouncers.delete(name3);
         }
       } else {
-        node.removeAttribute(name4);
-        SYNCED_ATTRIBUTES[name4]?.removed?.(node, name4);
+        node.removeAttribute(name3);
+        SYNCED_ATTRIBUTES[name3]?.removed?.(node, name3);
       }
     });
     iterate(added, (attribute3) => {
@@ -4078,7 +4058,7 @@ var Reconciler = class {
     const { debouncers, handlers, throttles } = node[meta];
     const {
       kind,
-      name: name4,
+      name: name3,
       value: value2,
       prevent_default: prevent,
       stop_propagation: stop,
@@ -4090,41 +4070,41 @@ var Reconciler = class {
     switch (kind) {
       case attribute_kind: {
         const valueOrDefault = value2 ?? "";
-        if (name4 === "virtual:defaultValue") {
+        if (name3 === "virtual:defaultValue") {
           node.defaultValue = valueOrDefault;
           return;
         }
-        if (valueOrDefault !== node.getAttribute(name4)) {
-          node.setAttribute(name4, valueOrDefault);
+        if (valueOrDefault !== node.getAttribute(name3)) {
+          node.setAttribute(name3, valueOrDefault);
         }
-        SYNCED_ATTRIBUTES[name4]?.added?.(node, value2);
+        SYNCED_ATTRIBUTES[name3]?.added?.(node, value2);
         break;
       }
       case property_kind:
-        node[name4] = value2;
+        node[name3] = value2;
         break;
       case event_kind: {
-        if (!handlers.has(name4)) {
-          node.addEventListener(name4, handleEvent, {
+        if (!handlers.has(name3)) {
+          node.addEventListener(name3, handleEvent, {
             passive: !attribute3.prevent_default
           });
         }
         if (throttleDelay > 0) {
-          const throttle = throttles.get(name4) ?? {};
+          const throttle = throttles.get(name3) ?? {};
           throttle.delay = throttleDelay;
-          throttles.set(name4, throttle);
+          throttles.set(name3, throttle);
         } else {
-          throttles.delete(name4);
+          throttles.delete(name3);
         }
         if (debounceDelay > 0) {
-          const debounce = debouncers.get(name4) ?? {};
+          const debounce = debouncers.get(name3) ?? {};
           debounce.delay = debounceDelay;
-          debouncers.set(name4, debounce);
+          debouncers.set(name3, debounce);
         } else {
-          clearTimeout(debouncers.get(name4)?.timeout);
-          debouncers.delete(name4);
+          clearTimeout(debouncers.get(name3)?.timeout);
+          debouncers.delete(name3);
         }
-        handlers.set(name4, (event4) => {
+        handlers.set(name3, (event4) => {
           if (prevent) event4.preventDefault();
           if (stop) event4.stopPropagation();
           const type = event4.type;
@@ -4252,20 +4232,20 @@ var createServerEvent = (event4, include2 = []) => {
   }
   return data;
 };
-var syncedBooleanAttribute = (name4) => {
+var syncedBooleanAttribute = (name3) => {
   return {
     added(node) {
-      node[name4] = true;
+      node[name3] = true;
     },
     removed(node) {
-      node[name4] = false;
+      node[name3] = false;
     }
   };
 };
-var syncedAttribute = (name4) => {
+var syncedAttribute = (name3) => {
   return {
     added(node, value2) {
-      node[name4] = value2;
+      node[name3] = value2;
     }
   };
 };
@@ -4382,22 +4362,22 @@ var virtualiseAttributes = (node) => {
   return attributes;
 };
 var virtualiseAttribute = (attr) => {
-  const name4 = attr.localName;
+  const name3 = attr.localName;
   const value2 = attr.value;
-  return attribute2(name4, value2);
+  return attribute2(name3, value2);
 };
 
 // build/dev/javascript/lustre/lustre/runtime/client/runtime.ffi.mjs
 var is_browser = () => !!document2;
 var is_reference_equal = (a2, b) => a2 === b;
 var Runtime = class {
-  constructor(root3, [model, effects], view6, update6) {
+  constructor(root3, [model, effects], view5, update5) {
     this.root = root3;
     this.#model = model;
-    this.#view = view6;
-    this.#update = update6;
-    this.#reconciler = new Reconciler(this.root, (event4, path2, name4) => {
-      const [events, msg] = handle(this.#events, path2, name4, event4);
+    this.#view = view5;
+    this.#update = update5;
+    this.#reconciler = new Reconciler(this.root, (event4, path2, name3) => {
+      const [events, msg] = handle(this.#events, path2, name3, event4);
       this.#events = events;
       if (msg.isOk()) {
         this.dispatch(msg[0], false);
@@ -4584,11 +4564,11 @@ function tick(events) {
     empty_list
   );
 }
-function do_remove_event(handlers, path2, name4) {
-  return remove(handlers, event3(path2, name4));
+function do_remove_event(handlers, path2, name3) {
+  return remove(handlers, event3(path2, name3));
 }
-function remove_event(events, path2, name4) {
-  let handlers = do_remove_event(events.handlers, path2, name4);
+function remove_event(events, path2, name3) {
+  let handlers = do_remove_event(events.handlers, path2, name3);
   let _record = events;
   return new Events(
     handlers,
@@ -4602,15 +4582,15 @@ function remove_attributes(handlers, path2, attributes) {
     handlers,
     (events, attribute3) => {
       if (attribute3 instanceof Event2) {
-        let name4 = attribute3.name;
-        return do_remove_event(events, path2, name4);
+        let name3 = attribute3.name;
+        return do_remove_event(events, path2, name3);
       } else {
         return events;
       }
     }
   );
 }
-function handle(events, path2, name4, event4) {
+function handle(events, path2, name3, event4) {
   let next_dispatched_paths = prepend(path2, events.next_dispatched_paths);
   let _block;
   let _record = events;
@@ -4622,7 +4602,7 @@ function handle(events, path2, name4, event4) {
   let events$1 = _block;
   let $ = get(
     events$1.handlers,
-    path2 + separator_event + name4
+    path2 + separator_event + name3
   );
   if ($.isOk()) {
     let handler = $[0];
@@ -4634,15 +4614,15 @@ function handle(events, path2, name4, event4) {
 function has_dispatched_events(events, path2) {
   return matches(path2, events.dispatched_paths);
 }
-function do_add_event(handlers, mapper, path2, name4, handler) {
+function do_add_event(handlers, mapper, path2, name3, handler) {
   return insert3(
     handlers,
-    event3(path2, name4),
+    event3(path2, name3),
     map3(handler, identity2(mapper))
   );
 }
-function add_event(events, mapper, path2, name4, handler) {
-  let handlers = do_add_event(events.handlers, mapper, path2, name4, handler);
+function add_event(events, mapper, path2, name3, handler) {
+  let handlers = do_add_event(events.handlers, mapper, path2, name3, handler);
   let _record = events;
   return new Events(
     handlers,
@@ -4656,9 +4636,9 @@ function add_attributes(handlers, mapper, path2, attributes) {
     handlers,
     (events, attribute3) => {
       if (attribute3 instanceof Event2) {
-        let name4 = attribute3.name;
+        let name3 = attribute3.name;
         let handler = attribute3.handler;
-        return do_add_event(events, mapper, path2, name4, handler);
+        return do_add_event(events, mapper, path2, name3, handler);
       } else {
         return events;
       }
@@ -4927,9 +4907,9 @@ var EffectDispatchedMessage = class extends CustomType {
   }
 };
 var EffectEmitEvent = class extends CustomType {
-  constructor(name4, data) {
+  constructor(name3, data) {
     super();
-    this.name = name4;
+    this.name = name3;
     this.data = data;
   }
 };
@@ -4937,14 +4917,14 @@ var SystemRequestedShutdown = class extends CustomType {
 };
 
 // build/dev/javascript/lustre/lustre/runtime/client/component.ffi.mjs
-var make_component = ({ init: init6, update: update6, view: view6, config }, name4) => {
+var make_component = ({ init: init5, update: update5, view: view5, config }, name3) => {
   if (!is_browser()) return new Error(new NotABrowser());
-  if (!name4.includes("-")) return new Error(new BadComponentName(name4));
-  if (customElements.get(name4)) {
-    return new Error(new ComponentAlreadyRegistered(name4));
+  if (!name3.includes("-")) return new Error(new BadComponentName(name3));
+  if (customElements.get(name3)) {
+    return new Error(new ComponentAlreadyRegistered(name3));
   }
-  const [model, effects] = init6(void 0);
-  const observedAttributes = config.attributes.entries().map(([name5]) => name5);
+  const [model, effects] = init5(void 0);
+  const observedAttributes = config.attributes.entries().map(([name4]) => name4);
   const component2 = class Component extends HTMLElement {
     static get observedAttributes() {
       return observedAttributes;
@@ -4969,8 +4949,8 @@ var make_component = ({ init: init6, update: update6, view: view6, config }, nam
       this.#runtime = new Runtime(
         this.#shadowRoot,
         [model, effects],
-        view6,
-        update6
+        view5,
+        update5
       );
     }
     adoptedCallback() {
@@ -4978,8 +4958,8 @@ var make_component = ({ init: init6, update: update6, view: view6, config }, nam
         this.#adoptStyleSheets();
       }
     }
-    attributeChangedCallback(name5, _, value2) {
-      const decoded = config.attributes.get(name5)(value2);
+    attributeChangedCallback(name4, _, value2) {
+      const decoded = config.attributes.get(name4)(value2);
       if (decoded.constructor === Ok) {
         this.dispatch(decoded[0]);
       }
@@ -5032,13 +5012,13 @@ var make_component = ({ init: init6, update: update6, view: view6, config }, nam
       this.#runtime.offset = this.#adoptedStyleNodes.length;
     }
   };
-  config.properties.forEach((decoder, name5) => {
-    Object.defineProperty(component2.prototype, name5, {
+  config.properties.forEach((decoder, name4) => {
+    Object.defineProperty(component2.prototype, name4, {
       get() {
-        return this[`_${name5}`];
+        return this[`_${name4}`];
       },
       set(value2) {
-        this[`_${name5}`] = value2;
+        this[`_${name4}`] = value2;
         const decoded = run(value2, decoder);
         if (decoded.constructor === Ok) {
           this.dispatch(decoded[0]);
@@ -5046,7 +5026,7 @@ var make_component = ({ init: init6, update: update6, view: view6, config }, nam
       }
     });
   });
-  customElements.define(name4, component2);
+  customElements.define(name3, component2);
   return new Ok(void 0);
 };
 
@@ -5071,7 +5051,7 @@ var Option = class extends CustomType {
   }
 };
 function new$6(options) {
-  let init6 = new Config2(
+  let init5 = new Config2(
     false,
     true,
     empty_dict(),
@@ -5083,34 +5063,16 @@ function new$6(options) {
   );
   return fold2(
     options,
-    init6,
+    init5,
     (config, option) => {
       return option.apply(config);
     }
   );
 }
-function on_attribute_change(name4, decoder) {
+function on_property_change(name3, decoder) {
   return new Option(
     (config) => {
-      let attributes = insert(config.attributes, name4, decoder);
-      let _record = config;
-      return new Config2(
-        _record.open_shadow_root,
-        _record.adopt_styles,
-        attributes,
-        _record.properties,
-        _record.is_form_associated,
-        _record.on_form_autofill,
-        _record.on_form_reset,
-        _record.on_form_restore
-      );
-    }
-  );
-}
-function on_property_change(name4, decoder) {
-  return new Option(
-    (config) => {
-      let properties = insert(config.properties, name4, decoder);
+      let properties = insert(config.properties, name3, decoder);
       let _record = config;
       return new Config2(
         _record.open_shadow_root,
@@ -5125,12 +5087,12 @@ function on_property_change(name4, decoder) {
     }
   );
 }
-function open_shadow_root(open2) {
+function open_shadow_root(open) {
   return new Option(
     (config) => {
       let _record = config;
       return new Config2(
-        open2,
+        open,
         _record.adopt_styles,
         _record.attributes,
         _record.properties,
@@ -5142,24 +5104,21 @@ function open_shadow_root(open2) {
     }
   );
 }
-function named_slot(name4, attributes, fallback) {
-  return slot(prepend(attribute2("name", name4), attributes), fallback);
-}
-function slot2(name4) {
-  return attribute2("slot", name4);
+function named_slot(name3, attributes, fallback) {
+  return slot(prepend(attribute2("name", name3), attributes), fallback);
 }
 
 // build/dev/javascript/lustre/lustre/runtime/client/spa.ffi.mjs
 var Spa = class _Spa {
-  static start({ init: init6, update: update6, view: view6 }, selector, flags) {
+  static start({ init: init5, update: update5, view: view5 }, selector, flags) {
     if (!is_browser()) return new Error(new NotABrowser());
     const root3 = selector instanceof HTMLElement ? selector : document2.querySelector(selector);
     if (!root3) return new Error(new ElementNotFound(selector));
-    return new Ok(new _Spa(root3, init6(flags), update6, view6));
+    return new Ok(new _Spa(root3, init5(flags), update5, view5));
   }
   #runtime;
-  constructor(root3, [init6, effects], update6, view6) {
-    this.#runtime = new Runtime(root3, [init6, effects], view6, update6);
+  constructor(root3, [init5, effects], update5, view5) {
+    this.#runtime = new Runtime(root3, [init5, effects], view5, update5);
   }
   send(message2) {
     switch (message2.constructor) {
@@ -5186,24 +5145,24 @@ var start = Spa.start;
 
 // build/dev/javascript/lustre/lustre.mjs
 var App = class extends CustomType {
-  constructor(init6, update6, view6, config) {
+  constructor(init5, update5, view5, config) {
     super();
-    this.init = init6;
-    this.update = update6;
-    this.view = view6;
+    this.init = init5;
+    this.update = update5;
+    this.view = view5;
     this.config = config;
   }
 };
 var BadComponentName = class extends CustomType {
-  constructor(name4) {
+  constructor(name3) {
     super();
-    this.name = name4;
+    this.name = name3;
   }
 };
 var ComponentAlreadyRegistered = class extends CustomType {
-  constructor(name4) {
+  constructor(name3) {
     super();
-    this.name = name4;
+    this.name = name3;
   }
 };
 var ElementNotFound = class extends CustomType {
@@ -5214,11 +5173,11 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function component(init6, update6, view6, options) {
-  return new App(init6, update6, view6, new$6(options));
+function component(init5, update5, view5, options) {
+  return new App(init5, update5, view5, new$6(options));
 }
-function application(init6, update6, view6) {
-  return new App(init6, update6, view6, new$6(empty_list));
+function application(init5, update5, view5) {
+  return new App(init5, update5, view5, new$6(empty_list));
 }
 function start3(app, selector, start_args) {
   return guard(
@@ -5439,10 +5398,10 @@ function month_from_int(month) {
 
 // build/dev/javascript/lustre/lustre/element/keyed.mjs
 function extract_keyed_children(children) {
-  let init6 = [empty2(), empty_list, 0];
+  let init5 = [empty2(), empty_list, 0];
   let $ = fold2(
     children,
-    init6,
+    init5,
     (_use0, _use1) => {
       let keyed_children2 = _use0[0];
       let children$12 = _use0[1];
@@ -5496,33 +5455,33 @@ function div2(attributes, children) {
 function emit(event4, data) {
   return event2(event4, data);
 }
-function is_immediate_event(name4) {
-  if (name4 === "input") {
+function is_immediate_event(name3) {
+  if (name3 === "input") {
     return true;
-  } else if (name4 === "change") {
+  } else if (name3 === "change") {
     return true;
-  } else if (name4 === "focus") {
+  } else if (name3 === "focus") {
     return true;
-  } else if (name4 === "focusin") {
+  } else if (name3 === "focusin") {
     return true;
-  } else if (name4 === "focusout") {
+  } else if (name3 === "focusout") {
     return true;
-  } else if (name4 === "blur") {
+  } else if (name3 === "blur") {
     return true;
-  } else if (name4 === "select") {
+  } else if (name3 === "select") {
     return true;
   } else {
     return false;
   }
 }
-function on(name4, handler) {
+function on(name3, handler) {
   return event(
-    name4,
+    name3,
     handler,
     empty_list,
     false,
     false,
-    is_immediate_event(name4),
+    is_immediate_event(name3),
     0,
     0
   );
@@ -5561,12 +5520,6 @@ function on_input(msg) {
       }
     )
   );
-}
-function on_focus(msg) {
-  return on("focus", success(msg));
-}
-function on_blur(msg) {
-  return on("blur", success(msg));
 }
 
 // build/dev/javascript/client/client/formy.mjs
@@ -5986,13 +5939,13 @@ function new_line_item_form() {
     new_field()
   );
 }
-function update_line_item(model, update6, fun) {
+function update_line_item(model, update5, fun) {
   let line_items = model.line_items;
   let _block;
   let _pipe = line_items;
   _block = upsert(
     _pipe,
-    update6,
+    update5,
     (line_item) => {
       let _pipe$1 = line_item;
       let _pipe$2 = lazy_unwrap(_pipe$1, new_line_item_form);
@@ -6393,21 +6346,21 @@ function model_to_form(model) {
   );
 }
 var component_name = "my-form";
-function view_input(name4, type_2, on_input2, field2) {
+function view_input(name3, type_2, on_input2, field2) {
   let value2 = field2.value;
   let parsed_value = field2.parsed_value;
   return div(
     toList([]),
     toList([
       label(
-        toList([for$(name4)]),
-        toList([text3(name4), text3(": ")])
+        toList([for$(name3)]),
+        toList([text3(name3), text3(": ")])
       ),
       input(
         toList([
           type_(type_2),
-          id(name4),
-          name(name4),
+          id(name3),
+          name(name3),
           on_input(on_input2),
           value(value2)
         ])
@@ -6788,7 +6741,7 @@ function update2(model, msg) {
     let _pipe = line_items;
     let _pipe$1 = keys(_pipe);
     let _pipe$2 = max(_pipe$1, compare2);
-    _block = unwrap(_pipe$2, 0);
+    _block = unwrap2(_pipe$2, 0);
     let max_line_num = _block;
     let _block$1;
     let _pipe$3 = line_items;
@@ -7270,360 +7223,25 @@ function magnifying_glass(attrs) {
 }
 
 // build/dev/javascript/client/dom.ffi.mjs
-var set_state = (value2, shadow_root) => {
-  if (!(shadow_root instanceof ShadowRoot)) return;
-  if (!(shadow_root.host.internals instanceof ElementInternals)) return;
-  shadow_root.host.internals.states.add(value2);
-};
-var remove_state = (value2, shadow_root) => {
-  if (!(shadow_root instanceof ShadowRoot)) return;
-  if (!(shadow_root.host.internals instanceof ElementInternals)) return;
-  shadow_root.host.internals.states.delete(value2);
-};
-
-// build/dev/javascript/client/client/ui/primitives/popover.mjs
-var TopLeft = class extends CustomType {
-};
-var TopMiddle = class extends CustomType {
-};
-var TopRight = class extends CustomType {
-};
-var RightTop = class extends CustomType {
-};
-var RightMiddle = class extends CustomType {
-};
-var RightBottom = class extends CustomType {
-};
-var BottomLeft = class extends CustomType {
-};
-var BottomMiddle = class extends CustomType {
-};
-var BottomRight = class extends CustomType {
-};
-var LeftTop = class extends CustomType {
-};
-var LeftMiddle = class extends CustomType {
-};
-var WillExpand = class extends CustomType {
-};
-var Expanded = class extends CustomType {
-};
-var WillCollapse = class extends CustomType {
-};
-var Collapsing = class extends CustomType {
-};
-var Collapsed = class extends CustomType {
-};
-var ParentSetOpen = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
+var hide_popover = (root3) => {
+  if (!(root3 instanceof ShadowRoot)) return;
+  const popover2 = root3.querySelector("[popover]");
+  if (!popover2) return;
+  try {
+    popover2.hidePopover();
+  } catch (_) {
   }
 };
-var SchedulerDidTick = class extends CustomType {
-};
-var TransitionDidEnd = class extends CustomType {
-};
-var UserPressedTrigger = class extends CustomType {
-};
-function open(is_open) {
-  return attribute2(
-    "aria-expanded",
-    (() => {
-      let _pipe = to_string2(is_open);
-      return lowercase(_pipe);
-    })()
-  );
-}
-function anchor(direction) {
-  return attribute2(
-    "anchor",
-    (() => {
-      if (direction instanceof TopLeft) {
-        return "top-left";
-      } else if (direction instanceof TopMiddle) {
-        return "top-middle";
-      } else if (direction instanceof TopRight) {
-        return "top-right";
-      } else if (direction instanceof RightTop) {
-        return "right-top";
-      } else if (direction instanceof RightMiddle) {
-        return "right-middle";
-      } else if (direction instanceof RightBottom) {
-        return "right-bottom";
-      } else if (direction instanceof BottomLeft) {
-        return "bottom-left";
-      } else if (direction instanceof BottomMiddle) {
-        return "bottom-middle";
-      } else if (direction instanceof BottomRight) {
-        return "bottom-right";
-      } else if (direction instanceof LeftTop) {
-        return "left-top";
-      } else if (direction instanceof LeftMiddle) {
-        return "left-middle";
-      } else {
-        return "left-bottom";
-      }
-    })()
-  );
-}
-function equal_width() {
-  return attribute2("equal-width", "");
-}
-function gap(value2) {
-  return style("--gap", value2);
-}
-function on_open(handler) {
-  return on("open", success(handler));
-}
-function on_close(handler) {
-  return on("close", success(handler));
-}
-function on_attribute_change2() {
-  return on_attribute_change(
-    "aria-expanded",
-    (value2) => {
-      let _block;
-      if (value2 === "true") {
-        _block = true;
-      } else {
-        _block = false;
-      }
-      let _pipe = _block;
-      let _pipe$1 = new ParentSetOpen(_pipe);
-      return new Ok(_pipe$1);
-    }
-  );
-}
-function set_state2(value2) {
-  return before_paint(
-    (_, root3) => {
-      return each(
-        toList([
-          "will-expand",
-          "expanded",
-          "will-collapse",
-          "collapsing",
-          "collapsed"
-        ]),
-        (state) => {
-          let $ = state === value2;
-          if ($) {
-            return set_state(value2, root3);
-          } else {
-            return remove_state(state, root3);
-          }
-        }
-      );
-    }
-  );
-}
-function init3(_) {
-  let model = new Collapsed();
-  let effect = batch(toList([set_state2("collapsed")]));
-  return [model, effect];
-}
-function tick2() {
-  return after_paint(
-    (dispatch, _) => {
-      return dispatch(new SchedulerDidTick());
-    }
-  );
-}
-function update3(model, msg) {
-  if (msg instanceof ParentSetOpen && msg[0] && model instanceof WillCollapse) {
-    return [
-      new WillExpand(),
-      batch(toList([tick2(), set_state2("will-expand")]))
-    ];
-  } else if (msg instanceof ParentSetOpen && msg[0] && model instanceof Collapsed) {
-    return [
-      new WillExpand(),
-      batch(toList([tick2(), set_state2("will-expand")]))
-    ];
-  } else if (msg instanceof ParentSetOpen && msg[0]) {
-    return [model, none()];
-  } else if (msg instanceof ParentSetOpen && !msg[0] && model instanceof WillExpand) {
-    return [
-      new WillCollapse(),
-      batch(toList([tick2(), set_state2("will-collapse")]))
-    ];
-  } else if (msg instanceof ParentSetOpen && !msg[0] && model instanceof Expanded) {
-    return [
-      new WillCollapse(),
-      batch(toList([tick2(), set_state2("will-collapse")]))
-    ];
-  } else if (msg instanceof ParentSetOpen && !msg[0]) {
-    return [model, none()];
-  } else if (msg instanceof SchedulerDidTick && model instanceof WillExpand) {
-    return [new Expanded(), set_state2("expanded")];
-  } else if (msg instanceof SchedulerDidTick && model instanceof WillCollapse) {
-    return [new Collapsing(), set_state2("collapsing")];
-  } else if (msg instanceof SchedulerDidTick) {
-    return [model, none()];
-  } else if (msg instanceof TransitionDidEnd && model instanceof Collapsing) {
-    return [new Collapsed(), set_state2("collapsed")];
-  } else if (msg instanceof TransitionDidEnd) {
-    return [model, none()];
-  } else if (msg instanceof UserPressedTrigger && model instanceof WillExpand) {
-    return [
-      new WillCollapse(),
-      batch(
-        toList([
-          set_state2("will-collapse"),
-          emit("close", null$()),
-          emit(
-            "change",
-            object2(toList([["open", bool(false)]]))
-          )
-        ])
-      )
-    ];
-  } else if (msg instanceof UserPressedTrigger && model instanceof Expanded) {
-    return [
-      new WillCollapse(),
-      batch(
-        toList([
-          set_state2("will-collapse"),
-          emit("close", null$()),
-          emit(
-            "change",
-            object2(toList([["open", bool(false)]]))
-          )
-        ])
-      )
-    ];
-  } else if (msg instanceof UserPressedTrigger && model instanceof WillCollapse) {
-    return [
-      new WillExpand(),
-      batch(
-        toList([
-          set_state2("will-expand"),
-          emit("open", null$()),
-          emit(
-            "change",
-            object2(toList([["open", bool(true)]]))
-          )
-        ])
-      )
-    ];
-  } else if (msg instanceof UserPressedTrigger && model instanceof Collapsing) {
-    return [
-      new WillExpand(),
-      batch(
-        toList([
-          set_state2("will-expand"),
-          emit("open", null$()),
-          emit(
-            "change",
-            object2(toList([["open", bool(true)]]))
-          )
-        ])
-      )
-    ];
-  } else {
-    return [
-      new WillExpand(),
-      batch(
-        toList([
-          set_state2("will-expand"),
-          emit("open", null$()),
-          emit(
-            "change",
-            object2(toList([["open", bool(true)]]))
-          )
-        ])
-      )
-    ];
-  }
-}
-function view_trigger() {
-  return named_slot(
-    "trigger",
-    toList([
-      on_click(new UserPressedTrigger()),
-      on(
-        "keydown",
-        field(
-          "key",
-          string2,
-          (key) => {
-            if (key === "Enter") {
-              return success(new UserPressedTrigger());
-            } else if (key === " ") {
-              return success(new UserPressedTrigger());
-            } else {
-              return failure(new UserPressedTrigger(), "Msg");
-            }
-          }
-        )
-      )
-    ]),
-    toList([])
-  );
-}
-function view_popover(model) {
-  return guard(
-    isEqual(model, new Collapsed()),
-    none2(),
-    () => {
-      return div(
-        toList([
-          attribute2("part", "popover-content"),
-          on(
-            "transitionend",
-            (() => {
-              let _pipe = new TransitionDidEnd();
-              return success(_pipe);
-            })()
-          )
-        ]),
-        toList([named_slot("popover", toList([]), toList([]))])
-      );
-    }
-  );
-}
-function view3(model) {
-  return div(
-    toList([style("position", "relative")]),
-    toList([view_trigger(), view_popover(model)])
-  );
-}
-var name2 = "lustre-ui-popover";
-function register2() {
-  let app = component(
-    init3,
-    update3,
-    view3,
-    toList([open_shadow_root(true), on_attribute_change2()])
-  );
-  return make_component(app, name2);
-}
-function popover(attributes, trigger, content) {
-  return element2(
-    name2,
-    attributes,
-    toList([
-      div(toList([slot2("trigger")]), toList([trigger])),
-      div(toList([slot2("popover")]), toList([content]))
-    ])
-  );
-}
 
 // build/dev/javascript/client/client/ui/combobox.mjs
 var Model2 = class extends CustomType {
-  constructor(expanded, value2, query, intent, options) {
+  constructor(value2, query, intent, values3) {
     super();
-    this.expanded = expanded;
     this.value = value2;
     this.query = query;
     this.intent = intent;
-    this.options = options;
+    this.values = values3;
   }
-};
-var DomBlurredTrigger = class extends CustomType {
-};
-var DomFocusedTrigger = class extends CustomType {
 };
 var ParentChangedValues = class extends CustomType {
   constructor(x0) {
@@ -7637,15 +7255,11 @@ var UserChangedQuery = class extends CustomType {
     this[0] = x0;
   }
 };
-var UserClosedMenu = class extends CustomType {
-};
 var UserHoveredOption = class extends CustomType {
   constructor(x0) {
     super();
     this[0] = x0;
   }
-};
-var UserOpenedMenu = class extends CustomType {
 };
 var UserPressedKey = class extends CustomType {
   constructor(x0) {
@@ -7659,43 +7273,21 @@ var UserSelectedOption = class extends CustomType {
     this[0] = x0;
   }
 };
-function set_state3(value2) {
-  return before_paint(
-    (_, root3) => {
-      return set_state(value2, root3);
-    }
-  );
+function init3(_) {
+  return [new Model2("", "", new None(), toList([])), none()];
 }
-function init4(_) {
-  let model = new Model2(false, "", "", new None(), toList([]));
-  let effect = batch(toList([set_state3("empty")]));
-  return [model, effect];
-}
-function remove_state2(value2) {
-  return before_paint(
-    (_, root3) => {
-      return remove_state(value2, root3);
-    }
-  );
-}
-function update4(model, msg) {
-  if (msg instanceof DomBlurredTrigger) {
-    return [model, remove_state2("trigger-focus")];
-  } else if (msg instanceof DomFocusedTrigger) {
-    return [model, set_state3("trigger-focus")];
-  } else if (msg instanceof ParentChangedValues) {
-    let options = msg[0];
-    let intent = new None();
+function update3(model, msg) {
+  if (msg instanceof ParentChangedValues) {
+    let values3 = msg[0];
     let _block;
+    let _pipe = values3;
+    let _pipe$1 = first(_pipe);
+    _block = from_result(_pipe$1);
+    let intent = _block;
+    let _block$1;
     let _record = model;
-    _block = new Model2(
-      _record.expanded,
-      _record.value,
-      _record.query,
-      intent,
-      options
-    );
-    let model$1 = _block;
+    _block$1 = new Model2(_record.value, _record.query, intent, values3);
+    let model$1 = _block$1;
     let effect = none();
     return [model$1, effect];
   } else if (msg instanceof UserChangedQuery) {
@@ -7706,75 +7298,36 @@ function update4(model, msg) {
     );
     let _block;
     let _record = model;
-    _block = new Model2(
-      _record.expanded,
-      _record.value,
-      query,
-      _record.intent,
-      _record.options
-    );
+    _block = new Model2(_record.value, query, _record.intent, _record.values);
     let model$1 = _block;
-    return [model$1, effect];
-  } else if (msg instanceof UserClosedMenu) {
-    let _block;
-    let _record = model;
-    _block = new Model2(
-      false,
-      _record.value,
-      _record.query,
-      new None(),
-      _record.options
-    );
-    let model$1 = _block;
-    let effect = remove_state2("expanded");
     return [model$1, effect];
   } else if (msg instanceof UserPressedKey && msg[0] === "Tab") {
-    let _block;
-    let _record = model;
-    _block = new Model2(
-      false,
-      _record.value,
-      _record.query,
-      new None(),
-      _record.options
+    let effect = after_paint(
+      (_, root3) => {
+        return hide_popover(root3);
+      }
     );
-    let model$1 = _block;
-    let effect = remove_state2("expanded");
-    return [model$1, effect];
+    return [model, effect];
   } else if (msg instanceof UserHoveredOption) {
     let intent = msg[0];
     return [
       (() => {
         let _record = model;
         return new Model2(
-          _record.expanded,
           _record.value,
           _record.query,
           new Some(intent),
-          _record.options
+          _record.values
         );
       })(),
       none()
     ];
-  } else if (msg instanceof UserOpenedMenu) {
-    let _block;
-    let _record = model;
-    _block = new Model2(
-      true,
-      _record.value,
-      _record.query,
-      _record.intent,
-      _record.options
-    );
-    let model$1 = _block;
-    let effect = set_state3("expanded");
-    return [model$1, effect];
   } else if (msg instanceof UserPressedKey && msg[0] === "ArrowDown") {
     let _block;
     let $ = model.intent;
     if ($ instanceof Some) {
       let intent2 = $[0];
-      let _pipe = model.options;
+      let _pipe = model.values;
       _block = fold_until(
         _pipe,
         new None(),
@@ -7798,83 +7351,82 @@ function update4(model, msg) {
         }
       );
     } else {
-      let _pipe = model.options;
+      let _pipe = model.values;
       let _pipe$1 = first(_pipe);
       _block = from_result(_pipe$1);
     }
     let intent = _block;
     let _block$1;
     let _record = model;
-    _block$1 = new Model2(
-      _record.expanded,
-      _record.value,
-      _record.query,
-      intent,
-      _record.options
-    );
+    _block$1 = new Model2(_record.value, _record.query, intent, _record.values);
     let model$1 = _block$1;
     let effect = none();
     return [model$1, effect];
-  } else if (msg instanceof UserPressedKey && msg[0] === "ArrowEnd") {
+  } else if (msg instanceof UserPressedKey && msg[0] === "End") {
     let _block;
-    let _pipe = model.options;
+    let _pipe = model.values;
     let _pipe$1 = last(_pipe);
     _block = from_result(_pipe$1);
     let intent = _block;
     let _block$1;
     let _record = model;
-    _block$1 = new Model2(
-      _record.expanded,
-      _record.value,
-      _record.query,
-      intent,
-      _record.options
-    );
+    _block$1 = new Model2(_record.value, _record.query, intent, _record.values);
     let model$1 = _block$1;
     let effect = none();
     return [model$1, effect];
   } else if (msg instanceof UserPressedKey && msg[0] === "Enter") {
     let _block;
-    let $ = model.intent;
-    if ($ instanceof Some) {
-      let value2 = $[0];
-      _block = emit(
-        "change",
-        object2(toList([["value", string3(value2)]]))
-      );
-    } else {
-      _block = none();
-    }
-    let effect = _block;
-    return [model, effect];
-  } else if (msg instanceof UserPressedKey && msg[0] === "Escape") {
-    let _block;
     let _record = model;
     _block = new Model2(
-      false,
-      _record.value,
+      (() => {
+        let _pipe = model.intent;
+        return unwrap(_pipe, model.value);
+      })(),
       _record.query,
-      new None(),
-      _record.options
+      _record.intent,
+      _record.values
     );
     let model$1 = _block;
-    let effect = remove_state2("expanded");
+    let _block$1;
+    let $ = model$1.intent;
+    if ($ instanceof Some) {
+      let value2 = $[0];
+      _block$1 = batch(
+        toList([
+          emit(
+            "change",
+            object2(toList([["value", string3(value2)]]))
+          ),
+          after_paint((_, root3) => {
+            return hide_popover(root3);
+          })
+        ])
+      );
+    } else {
+      _block$1 = after_paint(
+        (_, root3) => {
+          return hide_popover(root3);
+        }
+      );
+    }
+    let effect = _block$1;
     return [model$1, effect];
+  } else if (msg instanceof UserPressedKey && msg[0] === "Escape") {
+    let effect = after_paint(
+      (_, root3) => {
+        return hide_popover(root3);
+      }
+    );
+    return [model, effect];
   } else if (msg instanceof UserPressedKey && msg[0] === "Home") {
     let _block;
-    let _pipe = model.options;
+    let _pipe = model.values;
     let _pipe$1 = first(_pipe);
     _block = from_result(_pipe$1);
     let intent = _block;
     let _block$1;
     let _record = model;
-    _block$1 = new Model2(
-      _record.expanded,
-      _record.value,
-      _record.query,
-      intent,
-      _record.options
-    );
+    _block$1 = new Model2(_record.value, _record.query, intent, _record.values);
     let model$1 = _block$1;
     let effect = none();
     return [model$1, effect];
@@ -7883,7 +7435,7 @@ function update4(model, msg) {
     let $ = model.intent;
     if ($ instanceof Some) {
       let intent2 = $[0];
-      let _pipe = model.options;
+      let _pipe = model.values;
       let _pipe$1 = reverse(_pipe);
       _block = fold_until(
         _pipe$1,
@@ -7908,20 +7460,14 @@ function update4(model, msg) {
         }
       );
     } else {
-      let _pipe = model.options;
+      let _pipe = model.values;
       let _pipe$1 = last(_pipe);
       _block = from_result(_pipe$1);
     }
     let intent = _block;
     let _block$1;
     let _record = model;
-    _block$1 = new Model2(
-      _record.expanded,
-      _record.value,
-      _record.query,
-      intent,
-      _record.options
-    );
+    _block$1 = new Model2(_record.value, _record.query, intent, _record.values);
     let model$1 = _block$1;
     let effect = none();
     return [model$1, effect];
@@ -7930,45 +7476,22 @@ function update4(model, msg) {
   } else {
     let value2 = msg[0];
     let _block;
-    let _pipe = model.options;
-    let _pipe$1 = find2(_pipe, (item) => {
-      return item === value2;
-    });
-    _block = from_result(_pipe$1);
-    let intent = _block;
-    let _block$1;
     let _record = model;
-    _block$1 = new Model2(
-      _record.expanded,
-      _record.value,
-      _record.query,
-      intent,
-      _record.options
-    );
-    let model$1 = _block$1;
-    let effect = emit(
-      "change",
-      object2(toList([["value", string3(value2)]]))
+    _block = new Model2(value2, _record.query, _record.intent, _record.values);
+    let model$1 = _block;
+    let effect = batch(
+      toList([
+        emit(
+          "change",
+          object2(toList([["value", string3(value2)]]))
+        ),
+        after_paint((_, root3) => {
+          return hide_popover(root3);
+        })
+      ])
     );
     return [model$1, effect];
   }
-}
-function view_trigger2(value2) {
-  return button(
-    toList([
-      attribute2("part", "combobox-trigger"),
-      attribute2("tabindex", "0"),
-      on_focus(new DomFocusedTrigger()),
-      on_blur(new DomBlurredTrigger())
-    ]),
-    toList([
-      span(
-        toList([attribute2("part", "combobox-trigger-label")]),
-        toList([named_slot(value2, toList([]), toList([]))])
-      ),
-      chevron_down(toList([attribute2("part", "combobox-trigger-icon")]))
-    ])
-  );
 }
 function view_input2(query) {
   return container(
@@ -7977,6 +7500,7 @@ function view_input2(query) {
       magnifying_glass(toList([])),
       input2(
         toList([
+          autofocus(true),
           styles(
             toList([
               ["width", "100%"],
@@ -8065,81 +7589,54 @@ function do_view_options(options, value2, intent) {
 function view_options(options, value2, intent) {
   return ul2(toList([]), do_view_options(options, value2, intent));
 }
-var name3 = "lustre-ui-combobox";
-function view4(model) {
+var name2 = "lustre-ui-combobox";
+function view3(model) {
   return fragment2(
     toList([
-      popover(
+      button(
+        toList([popovertarget("mypopover")]),
         toList([
-          anchor(new BottomMiddle()),
-          equal_width(),
-          gap("var(--padding-y)"),
-          on_close(new UserClosedMenu()),
-          on_open(new UserOpenedMenu()),
-          open(model.expanded)
-        ]),
-        view_trigger2(model.value),
-        div(
-          toList([attribute2("part", "combobox-options")]),
-          toList([
-            view_input2(model.query),
-            view_options(model.options, model.value, model.intent)
-          ])
-        )
+          span(
+            toList([attribute2("part", "combobox-trigger-label")]),
+            toList([named_slot(model.value, toList([]), toList([]))])
+          ),
+          chevron_down(
+            toList([attribute2("part", "combobox-trigger-icon")])
+          )
+        ])
+      ),
+      div(
+        toList([id("mypopover"), popover("")]),
+        toList([
+          view_input2(model.query),
+          view_options(model.values, model.value, model.intent)
+        ])
       )
     ])
   );
 }
-function register3() {
-  let $ = register2();
-  if ($.isOk() && !$[0]) {
-    let app = component(
-      init4,
-      update4,
-      view4,
-      toList([
-        open_shadow_root(true),
-        on_property_change(
-          "values",
-          (() => {
-            let _pipe = list2(string2);
-            return map3(
-              _pipe,
-              (var0) => {
-                return new ParentChangedValues(var0);
-              }
-            );
-          })()
-        )
-      ])
-    );
-    return make_component(app, name3);
-  } else if (!$.isOk() && $[0] instanceof ComponentAlreadyRegistered) {
-    let app = component(
-      init4,
-      update4,
-      view4,
-      toList([
-        open_shadow_root(true),
-        on_property_change(
-          "values",
-          (() => {
-            let _pipe = list2(string2);
-            return map3(
-              _pipe,
-              (var0) => {
-                return new ParentChangedValues(var0);
-              }
-            );
-          })()
-        )
-      ])
-    );
-    return make_component(app, name3);
-  } else {
-    let error = $;
-    return error;
-  }
+function register2() {
+  let app = component(
+    init3,
+    update3,
+    view3,
+    toList([
+      open_shadow_root(true),
+      on_property_change(
+        "values",
+        (() => {
+          let _pipe = list2(string2);
+          return map3(
+            _pipe,
+            (var0) => {
+              return new ParentChangedValues(var0);
+            }
+          );
+        })()
+      )
+    ])
+  );
+  return make_component(app, name2);
 }
 
 // build/dev/javascript/client/client.mjs
@@ -8222,7 +7719,7 @@ function href2(route2) {
   let url = _block;
   return href(url);
 }
-function init5(_) {
+function init4(_) {
   let _block;
   let $ = do_initial_uri();
   if ($.isOk()) {
@@ -8242,7 +7739,7 @@ function init5(_) {
   );
   return [model, effect];
 }
-function update5(_, msg) {
+function update4(_, msg) {
   {
     let route2 = msg.route;
     return [new Model3(route2), none()];
@@ -8414,7 +7911,7 @@ function view_post(post_id) {
     ]);
   }
 }
-function view5(model) {
+function view4(model) {
   return div(
     toList([class$("mx-auto max-w-2xl px-32")]),
     toList([
@@ -8461,7 +7958,7 @@ function view5(model) {
   );
 }
 function main2() {
-  let app = application(init5, update5, view5);
+  let app = application(init4, update4, view4);
   let $ = register();
   if (!$.isOk()) {
     throw makeError(
@@ -8473,7 +7970,7 @@ function main2() {
       { value: $ }
     );
   }
-  let $1 = register3();
+  let $1 = register2();
   if (!$1.isOk()) {
     throw makeError(
       "let_assert",

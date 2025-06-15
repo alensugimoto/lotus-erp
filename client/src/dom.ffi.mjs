@@ -44,3 +44,14 @@ export const remove_state = (value, shadow_root) => {
 
   shadow_root.host.internals.states.delete(value);
 };
+
+export const hide_popover = (root) => {
+  if (!(root instanceof ShadowRoot)) return;
+  const popover = root.querySelector("[popover]");
+  if (!popover) return;
+  try {
+    popover.hidePopover();
+  } catch (_) {
+    // do nothing
+  }
+};
