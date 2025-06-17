@@ -1,5 +1,6 @@
 // IMPORTS ---------------------------------------------------------------------
 
+import client/counter_ano
 import client/formy
 import client/ui/combobox
 import gleam/int
@@ -10,7 +11,6 @@ import lustre/attribute.{type Attribute}
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre/server_component
 import modem
 
 // MAIN ------------------------------------------------------------------------
@@ -201,7 +201,7 @@ fn view_index() -> List(Element(msg)) {
       link(Posts, "read my ramblings ->"),
     ]),
     // TODO: get routes from server
-    server_component.element([server_component.route("/ws/counter")], []),
+    counter_ano.element([], []),
     paragraph("If you like <3"),
   ]
 }

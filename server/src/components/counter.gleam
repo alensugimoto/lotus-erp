@@ -71,14 +71,13 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
         })
         |> unzip5
 
-      echo "hello"
       echo sql.insert_quote(
         model.db,
         pog.Date(year:, month:, day:),
         add,
         remarks,
         customer_remarks,
-        customer_id.inner,
+        customer_id,
         sales_rep_id.inner,
         inserted_by,
         buyer_name.inner,

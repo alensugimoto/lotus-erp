@@ -1,6 +1,8 @@
 import client
+import client/counter_ano
+import client/customer_combobox
 import components/combobox
-import counter
+import components/counter
 import envoy
 import gleam/bytes_tree
 import gleam/dict
@@ -77,9 +79,11 @@ fn get_resources() -> dict.Dict(List(String), Resource) {
       #(path_segs, Asset(priv:, src:, doc_type:))
     })
 
-  let websockets =
-    [#([], Dev), #(["counter"], CounterComponent), #(["combobox"], Combobox)]
-    |> list.map(pair.map_first(_, fn(path_segs) { ["ws", ..path_segs] }))
+  let websockets = [
+    #(["ws"], Dev),
+    #(counter_ano.path_segments, CounterComponent),
+    #(customer_combobox.path_segments, Combobox),
+  ]
 
   let resources = list.append(assets, websockets)
   let dict_resources = dict.from_list(resources)
@@ -143,11 +147,11 @@ fn handle_get_request(
       Combobox -> start_component(req:, app: combobox.component, with: ctx.db)
     }
   })
-  |> result.unwrap(
+  |> result.lazy_unwrap(fn() {
     req
     |> request.to_uri()
-    |> serve_html(ctx),
-  )
+    |> serve_html(ctx)
+  })
 }
 
 fn serve_static_file(

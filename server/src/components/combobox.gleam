@@ -1,17 +1,15 @@
+import client/customer_combobox
 import client/ui/combobox
-import gleam/dynamic/decode
 import gleam/int
-import gleam/json
 import gleam/list
+import gleam/option
 import gleam/pair
 import gleam/result
 import lustre.{type App}
-import lustre/attribute.{type Attribute}
 import lustre/component
 import lustre/effect.{type Effect}
 import lustre/element.{type Element}
 import lustre/element/html
-import lustre/event
 import pog
 import sql
 
@@ -21,24 +19,18 @@ pub fn component() -> App(pog.Connection, Model, Msg) {
   lustre.component(init, update, view, [component.open_shadow_root(True)])
 }
 
-const detail = "detail"
-
-pub fn on_change(handler: fn(String) -> msg) -> Attribute(msg) {
-  let value = [detail, "value"]
-  event.on("change", {
-    decode.at(value, decode.string)
-    |> decode.map(handler)
-  })
-}
-
 // MODEL -----------------------------------------------------------------------
 
 pub type Model {
-  Model(db: pog.Connection, customers: List(sql.ListCustomersRow))
+  Model(
+    db: pog.Connection,
+    customers: List(sql.ListCustomersRow),
+    selection: option.Option(sql.GetCustomerRow),
+  )
 }
 
 fn init(db) -> #(Model, Effect(Msg)) {
-  Model(db:, customers: [])
+  Model(db:, customers: [], selection: option.None)
   |> pair.new(effect.none())
 }
 
@@ -52,10 +44,32 @@ pub opaque type Msg {
 fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
   case msg {
     UserUpdatedValue(value) -> {
-      let effect =
-        event.emit("change", json.object([#("value", json.string(value))]))
+      let Model(db:, ..) = model
 
-      #(model, effect)
+      let result = {
+        use value <- result.try(
+          value
+          |> int.parse,
+        )
+        use rows <- result.try(
+          db
+          |> sql.get_customer(value)
+          |> result.replace_error(Nil),
+        )
+        case rows.rows {
+          [row] -> Ok(row)
+          _ -> Error(Nil)
+        }
+      }
+
+      case result {
+        Ok(row) -> {
+          let model = Model(..model, selection: row |> option.Some)
+          let effect = customer_combobox.emit_change(row.id)
+          #(model, effect)
+        }
+        Error(Nil) -> #(model, effect.none())
+      }
     }
 
     UserUpdatedQuery(query) -> {
@@ -66,7 +80,7 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
       |> result.map(fn(rows) { rows.rows })
       |> result.replace_error([])
       |> result.unwrap_both
-      |> Model(db:)
+      |> fn(customers) { Model(..model, customers:) }
       |> pair.new(effect.none())
     }
   }
@@ -75,22 +89,55 @@ fn update(model: Model, msg: Msg) -> #(Model, Effect(Msg)) {
 // VIEW ------------------------------------------------------------------------
 
 fn view(model: Model) -> Element(Msg) {
-  let Model(customers:, ..) = model
+  let Model(customers:, selection:, ..) = model
+
+  let #(selected, customers) =
+    customers
+    |> list.map_fold(False, fn(acc, customer) {
+      let selected = case selection {
+        option.None -> False
+        option.Some(selection) -> customer.id == selection.id
+      }
+
+      #(
+        acc || selected,
+        combobox.option(
+          value: customer.id
+            |> int.to_string,
+          label: customer.code,
+          selected:,
+          content: option.Some([
+            html.h5([], [html.text(customer.name)]),
+            html.p([], [html.text(customer.code)]),
+          ]),
+        ),
+      )
+    })
 
   combobox.element(
     [combobox.on_query(UserUpdatedQuery), combobox.on_change(UserUpdatedValue)],
-    customers
-      |> list.map(fn(customer) {
-        #(
-          customer.id
-            |> int.to_string,
-          customer.code,
-          [
-            html.div([], [html.text(customer.name)]),
-            html.div([], [html.text(int.to_string(customer.id))]),
-          ],
-        )
-      })
-      |> list.prepend(#("", [html.text("Please select a customer...")])),
+    case selected {
+      True -> customers
+      False -> [
+        case selection {
+          option.Some(selection) ->
+            combobox.option(
+              value: selection.id
+                |> int.to_string,
+              label: selection.code,
+              selected: True,
+              content: option.None,
+            )
+          option.None ->
+            combobox.option(
+              value: "",
+              label: "Please select a customer",
+              selected: True,
+              content: option.None,
+            )
+        },
+        ..customers
+      ]
+    },
   )
 }

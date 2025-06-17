@@ -1,5 +1,6 @@
 // IMPORTS ---------------------------------------------------------------------
 
+import client/customer_combobox
 import gleam/dict
 import gleam/dynamic/decode
 import gleam/float
@@ -156,7 +157,7 @@ pub type Model {
     add: Field(String),
     remarks: Field(String),
     customer_remarks: Field(String),
-    customer_id: Field(PositiveInt),
+    customer_id: option.Option(Result(Int, String)),
     sales_rep_id: Field(PositiveInt),
     buyer_name: Field(NonEmptyString),
     customer_name: Field(NonEmptyString),
@@ -184,7 +185,7 @@ pub type Form {
     add: String,
     remarks: String,
     customer_remarks: String,
-    customer_id: PositiveInt,
+    customer_id: Int,
     sales_rep_id: PositiveInt,
     buyer_name: NonEmptyString,
     customer_name: NonEmptyString,
@@ -201,7 +202,7 @@ fn form_decoder() -> decode.Decoder(Form) {
   use add <- decode.field("add", decode.string)
   use remarks <- decode.field("remarks", decode.string)
   use customer_remarks <- decode.field("customer_remarks", decode.string)
-  use customer_id <- decode.field("customer_id", positive_int_decoder())
+  use customer_id <- decode.field("customer_id", decode.int)
   use sales_rep_id <- decode.field("sales_rep_id", positive_int_decoder())
   use buyer_name <- decode.field("buyer_name", non_empty_string_decoder())
   use customer_name <- decode.field("customer_name", non_empty_string_decoder())
@@ -259,7 +260,7 @@ fn encode_form(form: Form) -> json.Json {
     #("add", json.string(add)),
     #("remarks", json.string(remarks)),
     #("customer_remarks", json.string(customer_remarks)),
-    #("customer_id", json.int(customer_id.inner)),
+    #("customer_id", json.int(customer_id)),
     #("sales_rep_id", json.int(sales_rep_id.inner)),
     #("buyer_name", json.string(buyer_name.inner)),
     #("customer_name", json.string(customer_name.inner)),
@@ -373,7 +374,7 @@ fn update_values(model: Model) -> Model {
     date: date
       |> update_parsed_value(date_parse),
     customer_id: customer_id
-      |> update_parsed_value(positive_int_parse),
+      |> option.lazy_or(fn() { required |> Error |> option.Some }),
     add: add
       |> update_parsed_value(Ok),
     remarks: remarks
@@ -463,7 +464,7 @@ fn model_to_form(model: Model) -> Result(Form, String) {
   )
   use customer_id <- result.try(
     customer_id
-    |> get_parsed_value(positive_int_parse),
+    |> option.lazy_unwrap(fn() { required |> Error }),
   )
   use sales_rep_id <- result.try(
     sales_rep_id
@@ -555,6 +556,8 @@ fn model_to_form(model: Model) -> Result(Form, String) {
   |> Ok
 }
 
+// NOTE: `value` is not being used currently and can be removed
+// like with `customer_id`
 pub opaque type Field(a) {
   Field(value: String, parsed_value: option.Option(Result(a, String)))
 }
@@ -569,7 +572,7 @@ fn init(_) -> #(Model, effect.Effect(Msg)) {
     add: new_field(),
     remarks: new_field(),
     customer_remarks: new_field(),
-    customer_id: new_field(),
+    customer_id: option.None,
     sales_rep_id: new_field(),
     buyer_name: new_field(),
     customer_name: new_field(),
@@ -591,7 +594,7 @@ pub type Msg {
   UserRemovedLineItem(Int)
   //
   UserUpdatedDate(String)
-  UserUpdatedCustomerId(String)
+  UserUpdatedCustomerId(Int)
   UserUpdatedShipVia(String)
   UserUpdatedWarehouseId(String)
   UserUpdatedFreightCharge(String)
@@ -610,9 +613,11 @@ pub type Msg {
   UserUpdatedDiscountRate(Int, String)
 }
 
+const required = "Required"
+
 fn non_empty_string_parse(value: String) -> Result(NonEmptyString, String) {
   case string.is_empty(value) {
-    True -> Error("Required")
+    True -> required |> Error
     False -> value |> NonEmptyString |> Ok
   }
 }
@@ -667,15 +672,7 @@ fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     }
 
     UserUpdatedCustomerId(value) -> {
-      Model(
-        ..model,
-        customer_id: Field(
-          value:,
-          parsed_value: value
-            |> positive_int_parse
-            |> option.Some,
-        ),
-      )
+      Model(..model, customer_id: value |> Ok |> option.Some)
       |> pair.new(effect.none())
     }
 
@@ -967,7 +964,7 @@ fn view(model: Model) -> Element(Msg) {
     add:,
     remarks:,
     customer_remarks:,
-    customer_id:,
+    customer_id: _,
     sales_rep_id:,
     buyer_name:,
     customer_name:,
@@ -979,7 +976,10 @@ fn view(model: Model) -> Element(Msg) {
   ) = model
 
   html.div([], [
-    server_component.element([server_component.route("/ws/combobox")], []),
+    customer_combobox.element(
+      [customer_combobox.on_change(UserUpdatedCustomerId)],
+      [],
+    ),
     view_input(
       name: "date",
       type_: "date",
@@ -998,12 +998,6 @@ fn view(model: Model) -> Element(Msg) {
       type_: "text",
       on_input: UserUpdatedCustomerRemarks,
       field: customer_remarks,
-    ),
-    view_input(
-      name: "customer_id",
-      type_: "text",
-      on_input: UserUpdatedCustomerId,
-      field: customer_id,
     ),
     view_input(
       name: "sales_rep_id",

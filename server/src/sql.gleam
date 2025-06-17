@@ -8,7 +8,7 @@ import pog
 /// > [squirrel package](https://github.com/giacomocavalieri/squirrel).
 ///
 pub type ListCustomersRow {
-  ListCustomersRow(id: Int, name: String)
+  ListCustomersRow(id: Int, code: String, name: String)
 }
 
 /// Runs the `list_customers` query
@@ -20,12 +20,14 @@ pub type ListCustomersRow {
 pub fn list_customers(db, arg_1) {
   let decoder = {
     use id <- decode.field(0, decode.int)
-    use name <- decode.field(1, decode.string)
-    decode.success(ListCustomersRow(id:, name:))
+    use code <- decode.field(1, decode.string)
+    use name <- decode.field(2, decode.string)
+    decode.success(ListCustomersRow(id:, code:, name:))
   }
 
   "select
     id,
+    code,
     name
 from
     customers
@@ -137,6 +139,37 @@ returning id;
   |> pog.parameter(pog.array(fn(value) { pog.float(value) }, arg_16))
   |> pog.parameter(pog.array(fn(value) { pog.float(value) }, arg_17))
   |> pog.parameter(pog.text(arg_18))
+  |> pog.returning(decoder)
+  |> pog.execute(db)
+}
+
+/// A row you get from running the `get_customer` query
+/// defined in `./src/sql/get_customer.sql`.
+///
+/// > 🐿️ This type definition was generated automatically using v3.0.4 of the
+/// > [squirrel package](https://github.com/giacomocavalieri/squirrel).
+///
+pub type GetCustomerRow {
+  GetCustomerRow(id: Int, code: String)
+}
+
+/// Runs the `get_customer` query
+/// defined in `./src/sql/get_customer.sql`.
+///
+/// > 🐿️ This function was generated automatically using v3.0.4 of
+/// > the [squirrel package](https://github.com/giacomocavalieri/squirrel).
+///
+pub fn get_customer(db, arg_1) {
+  let decoder = {
+    use id <- decode.field(0, decode.int)
+    use code <- decode.field(1, decode.string)
+    decode.success(GetCustomerRow(id:, code:))
+  }
+
+  "select id, code from customers where id = $1;
+"
+  |> pog.query
+  |> pog.parameter(pog.int(arg_1))
   |> pog.returning(decoder)
   |> pog.execute(db)
 }

@@ -44,8 +44,8 @@ var List = class {
     return length3 - 1;
   }
 };
-function prepend(element5, tail) {
-  return new NonEmpty(element5, tail);
+function prepend(element7, tail) {
+  return new NonEmpty(element7, tail);
 }
 function toList(elements, tail) {
   return List.fromArray(elements, tail);
@@ -389,14 +389,6 @@ function from_result(result) {
     return new None();
   }
 }
-function unwrap(option, default$) {
-  if (option instanceof Some) {
-    let x = option[0];
-    return x;
-  } else {
-    return default$;
-  }
-}
 function lazy_unwrap(option, default$) {
   if (option instanceof Some) {
     let x = option[0];
@@ -411,6 +403,20 @@ function map(option, fun) {
     return new Some(fun(x));
   } else {
     return new None();
+  }
+}
+function or(first2, second2) {
+  if (first2 instanceof Some) {
+    return first2;
+  } else {
+    return second2;
+  }
+}
+function lazy_or(first2, second2) {
+  if (first2 instanceof Some) {
+    return first2;
+  } else {
+    return second2();
   }
 }
 
@@ -1195,6 +1201,11 @@ function map_values(dict2, fun) {
   return do_map_values(fun, dict2);
 }
 
+// build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
+function nil() {
+  return identity(void 0);
+}
+
 // build/dev/javascript/gleam_stdlib/gleam/list.mjs
 var Continue = class extends CustomType {
   constructor(x0) {
@@ -1236,6 +1247,33 @@ function first(list4) {
     let first$1 = list4.head;
     return new Ok(first$1);
   }
+}
+function filter_loop(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list4 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list4.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let first$1 = list4.head;
+      let rest$1 = list4.tail;
+      let _block;
+      let $ = fun(first$1);
+      if ($) {
+        _block = prepend(first$1, acc);
+      } else {
+        _block = acc;
+      }
+      let new_acc = _block;
+      loop$list = rest$1;
+      loop$fun = fun;
+      loop$acc = new_acc;
+    }
+  }
+}
+function filter(list4, predicate) {
+  return filter_loop(list4, predicate, toList([]));
 }
 function map_loop(loop$list, loop$fun, loop$acc) {
   while (true) {
@@ -1316,6 +1354,15 @@ function fold2(loop$list, loop$initial, loop$fun) {
       loop$initial = fun(initial, first$1);
       loop$fun = fun;
     }
+  }
+}
+function fold_right(list4, initial, fun) {
+  if (list4.hasLength(0)) {
+    return initial;
+  } else {
+    let first$1 = list4.head;
+    let rest$1 = list4.tail;
+    return fun(fold_right(rest$1, initial, fun), first$1);
   }
 }
 function fold_until(loop$list, loop$initial, loop$fun) {
@@ -1815,6 +1862,9 @@ function success(data) {
     return [data, toList([])];
   });
 }
+function decode_dynamic(data) {
+  return [data, toList([])];
+}
 function map3(decoder, transformer) {
   return new Decoder(
     (d) => {
@@ -1822,6 +1872,24 @@ function map3(decoder, transformer) {
       let data = $[0];
       let errors = $[1];
       return [transformer(data), errors];
+    }
+  );
+}
+function then$(decoder, next) {
+  return new Decoder(
+    (dynamic_data) => {
+      let $ = decoder.function(dynamic_data);
+      let data = $[0];
+      let errors = $[1];
+      let decoder$1 = next(data);
+      let $1 = decoder$1.function(dynamic_data);
+      let layer = $1;
+      let data$1 = $1[0];
+      if (errors.hasLength(0)) {
+        return layer;
+      } else {
+        return [data$1, errors];
+      }
     }
   );
 }
@@ -1862,6 +1930,12 @@ function one_of(first2, alternatives) {
     }
   );
 }
+var dynamic = /* @__PURE__ */ new Decoder(decode_dynamic);
+function decode_error(expected, found) {
+  return toList([
+    new DecodeError(expected, classify_dynamic(found), toList([]))
+  ]);
+}
 function run_dynamic_function(data, name3, f) {
   let $ = f(data);
   if ($.isOk()) {
@@ -1877,6 +1951,11 @@ function run_dynamic_function(data, name3, f) {
 }
 function decode_int(data) {
   return run_dynamic_function(data, "Int", int);
+}
+function failure(zero, expected) {
+  return new Decoder((d) => {
+    return [zero, decode_error(expected, d)];
+  });
 }
 var int2 = /* @__PURE__ */ new Decoder(decode_int);
 function decode_string(data) {
@@ -1997,6 +2076,27 @@ function subfield(field_path, field_decoder, next) {
     }
   );
 }
+function at(path2, inner) {
+  return new Decoder(
+    (data) => {
+      return index3(
+        path2,
+        toList([]),
+        inner.function,
+        data,
+        (data2, position) => {
+          let $ = inner.function(data2);
+          let default$ = $[0];
+          let _pipe = [
+            default$,
+            toList([new DecodeError("Field", "Nothing", toList([]))])
+          ];
+          return push_path(_pipe, reverse(position));
+        }
+      );
+    }
+  );
+}
 function field(field_name, field_decoder, next) {
   return subfield(toList([field_name]), field_decoder, next);
 }
@@ -2038,6 +2138,9 @@ function graphemes_iterator(string5) {
     segmenter ||= new Intl.Segmenter();
     return segmenter.segment(string5)[Symbol.iterator]();
   }
+}
+function lowercase(string5) {
+  return string5.toLowerCase();
 }
 function split(xs, pattern) {
   return List.fromArray(xs.split(pattern));
@@ -2144,8 +2247,8 @@ function list(data, decode2, pushPath, index4, emptyList) {
     return [emptyList, List.fromArray([error])];
   }
   const decoded = [];
-  for (const element5 of data) {
-    const layer = decode2(element5);
+  for (const element7 of data) {
+    const layer = decode2(element7);
     const [out, errors] = layer;
     if (errors instanceof NonEmpty) {
       const [_, errors2] = pushPath(layer, index4.toString());
@@ -2281,7 +2384,7 @@ function try$(result, fun) {
     return new Error(e);
   }
 }
-function unwrap2(result, default$) {
+function unwrap(result, default$) {
   if (result.isOk()) {
     let v = result[0];
     return v;
@@ -2564,6 +2667,9 @@ function do_classes(loop$names, loop$class) {
 }
 function classes(names) {
   return class$(do_classes(names, ""));
+}
+function hidden(is_hidden) {
+  return boolean_attribute("hidden", is_hidden);
 }
 function id(value2) {
   return attribute2("id", value2);
@@ -5050,7 +5156,7 @@ var Option = class extends CustomType {
     this.apply = apply;
   }
 };
-function new$6(options) {
+function new$6(options2) {
   let init5 = new Config2(
     false,
     true,
@@ -5062,28 +5168,10 @@ function new$6(options) {
     option_none
   );
   return fold2(
-    options,
+    options2,
     init5,
     (config, option) => {
       return option.apply(config);
-    }
-  );
-}
-function on_property_change(name3, decoder) {
-  return new Option(
-    (config) => {
-      let properties = insert(config.properties, name3, decoder);
-      let _record = config;
-      return new Config2(
-        _record.open_shadow_root,
-        _record.adopt_styles,
-        _record.attributes,
-        properties,
-        _record.is_form_associated,
-        _record.on_form_autofill,
-        _record.on_form_reset,
-        _record.on_form_restore
-      );
     }
   );
 }
@@ -5103,6 +5191,9 @@ function open_shadow_root(open) {
       );
     }
   );
+}
+function default_slot(attributes, fallback) {
+  return slot(attributes, fallback);
 }
 function named_slot(name3, attributes, fallback) {
   return slot(prepend(attribute2("name", name3), attributes), fallback);
@@ -5173,8 +5264,8 @@ var ElementNotFound = class extends CustomType {
 };
 var NotABrowser = class extends CustomType {
 };
-function component(init5, update5, view5, options) {
-  return new App(init5, update5, view5, new$6(options));
+function component(init5, update5, view5, options2) {
+  return new App(init5, update5, view5, new$6(options2));
 }
 function application(init5, update5, view5) {
   return new App(init5, update5, view5, new$6(empty_list));
@@ -5187,14 +5278,6 @@ function start3(app, selector, start_args) {
       return start(app, selector, start_args);
     }
   );
-}
-
-// build/dev/javascript/lustre/lustre/server_component.mjs
-function element3(attributes, children) {
-  return element2("lustre-server-component", attributes, children);
-}
-function route(path2) {
-  return attribute2("route", path2);
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/pair.mjs
@@ -5215,7 +5298,7 @@ var do_initial_uri = () => {
     return new Ok(uri_from_url(new URL(initial_location)));
   }
 };
-var do_init = (dispatch, options = defaults) => {
+var do_init = (dispatch, options2 = defaults) => {
   document.addEventListener("click", (event4) => {
     const a2 = find_anchor(event4.target);
     if (!a2) return;
@@ -5223,8 +5306,8 @@ var do_init = (dispatch, options = defaults) => {
       const url = new URL(a2.href);
       const uri = uri_from_url(url);
       const is_external = url.host !== window.location.host;
-      if (!options.handle_external_links && is_external) return;
-      if (!options.handle_internal_links && !is_external) return;
+      if (!options2.handle_external_links && is_external) return;
+      if (!options2.handle_internal_links && !is_external) return;
       event4.preventDefault();
       if (!is_external) {
         window.history.pushState({}, "", a2.href);
@@ -5303,6 +5386,49 @@ function init(handler) {
         }
       );
     }
+  );
+}
+
+// build/dev/javascript/lustre/lustre/server_component.mjs
+function element3(attributes, children) {
+  return element2("lustre-server-component", attributes, children);
+}
+function route(path2) {
+  return attribute2("route", path2);
+}
+function include(event4, properties) {
+  if (event4 instanceof Event2) {
+    let _record = event4;
+    return new Event2(
+      _record.kind,
+      _record.name,
+      _record.handler,
+      properties,
+      _record.prevent_default,
+      _record.stop_propagation,
+      _record.immediate,
+      _record.debounce,
+      _record.throttle
+    );
+  } else {
+    return event4;
+  }
+}
+
+// build/dev/javascript/client/client/counter_ano.mjs
+var path_segments2 = /* @__PURE__ */ toList(["ws", "counter"]);
+function element4(attributes, children) {
+  return element3(
+    prepend(
+      (() => {
+        let _pipe = path_segments2;
+        let _pipe$1 = prepend2(_pipe, "");
+        let _pipe$2 = join(_pipe$1, "/");
+        return route(_pipe$2);
+      })(),
+      attributes
+    ),
+    children
   );
 }
 
@@ -5428,7 +5554,7 @@ function extract_keyed_children(children) {
   let children_count = $[2];
   return [keyed_children, reverse(children$1), children_count];
 }
-function element4(tag, attributes, children) {
+function element5(tag, attributes, children) {
   let $ = extract_keyed_children(children);
   let keyed_children = $[0];
   let children$1 = $[1];
@@ -5445,10 +5571,10 @@ function element4(tag, attributes, children) {
   );
 }
 function ul2(attributes, children) {
-  return element4("ul", attributes, children);
+  return element5("ul", attributes, children);
 }
 function div2(attributes, children) {
-  return element4("div", attributes, children);
+  return element5("div", attributes, children);
 }
 
 // build/dev/javascript/lustre/lustre/event.mjs
@@ -5519,6 +5645,45 @@ function on_input(msg) {
         return success(msg(value2));
       }
     )
+  );
+}
+
+// build/dev/javascript/client/client/customer_combobox.mjs
+var change_event = "change";
+var detail_key = "detail";
+var value_key = "value";
+function on_change(handler) {
+  let key = toList([detail_key, value_key]);
+  let _pipe = on(
+    change_event,
+    (() => {
+      let _pipe2 = at(key, int2);
+      return map3(_pipe2, handler);
+    })()
+  );
+  return include(
+    _pipe,
+    toList([
+      (() => {
+        let _pipe$1 = key;
+        return join(_pipe$1, ".");
+      })()
+    ])
+  );
+}
+var path_segments3 = /* @__PURE__ */ toList(["ws", "combobox"]);
+function element6(attributes, children) {
+  return element3(
+    prepend(
+      (() => {
+        let _pipe = path_segments3;
+        let _pipe$1 = prepend2(_pipe, "");
+        let _pipe$2 = join(_pipe$1, "/");
+        return route(_pipe$2);
+      })(),
+      attributes
+    ),
+    children
   );
 }
 
@@ -5787,7 +5952,7 @@ function encode_form(form) {
       ["add", string3(add3)],
       ["remarks", string3(remarks)],
       ["customer_remarks", string3(customer_remarks)],
-      ["customer_id", int3(customer_id.inner)],
+      ["customer_id", int3(customer_id)],
       ["sales_rep_id", int3(sales_rep_id.inner)],
       ["buyer_name", string3(buyer_name.inner)],
       ["customer_name", string3(customer_name.inner)],
@@ -5836,7 +6001,7 @@ function init2(_) {
     new_field(),
     new_field(),
     new_field(),
-    new_field(),
+    new None(),
     new_field(),
     new_field(),
     new_field(),
@@ -5848,10 +6013,307 @@ function init2(_) {
   );
   return new$7(_pipe, none());
 }
+function new_line_item_form() {
+  return new LineItemForm(
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field(),
+    new_field()
+  );
+}
+function update_line_item(model, update5, fun) {
+  let line_items = model.line_items;
+  let _block;
+  let _pipe = line_items;
+  _block = upsert(
+    _pipe,
+    update5,
+    (line_item) => {
+      let _pipe$1 = line_item;
+      let _pipe$2 = lazy_unwrap(_pipe$1, new_line_item_form);
+      return fun(_pipe$2);
+    }
+  );
+  let line_items$1 = _block;
+  let _record = model;
+  return new Model(
+    _record.date,
+    _record.add,
+    _record.remarks,
+    _record.customer_remarks,
+    _record.customer_id,
+    _record.sales_rep_id,
+    _record.buyer_name,
+    _record.customer_name,
+    _record.ship_via,
+    _record.freight_charge,
+    _record.warehouse_id,
+    line_items$1,
+    _record.project_name
+  );
+}
+var component_name = "my-form";
+function view_input(name3, type_2, on_input2, field2) {
+  let value2 = field2.value;
+  let parsed_value = field2.parsed_value;
+  return div(
+    toList([]),
+    toList([
+      label(
+        toList([for$(name3)]),
+        toList([text3(name3), text3(": ")])
+      ),
+      input(
+        toList([
+          type_(type_2),
+          id(name3),
+          name(name3),
+          on_input(on_input2),
+          value(value2)
+        ])
+      ),
+      (() => {
+        let _pipe = parsed_value;
+        let _pipe$1 = map(
+          _pipe,
+          (parsed_value2) => {
+            let _pipe$12 = parsed_value2;
+            let _pipe$2 = map4(
+              _pipe$12,
+              (_) => {
+                return none2();
+              }
+            );
+            let _pipe$3 = map_error(
+              _pipe$2,
+              (msg) => {
+                return p(toList([]), toList([text3(msg)]));
+              }
+            );
+            return unwrap_both(_pipe$3);
+          }
+        );
+        return lazy_unwrap(_pipe$1, none2);
+      })()
+    ])
+  );
+}
+function view2(model) {
+  let date = model.date;
+  let add3 = model.add;
+  let remarks = model.remarks;
+  let customer_remarks = model.customer_remarks;
+  let sales_rep_id = model.sales_rep_id;
+  let buyer_name = model.buyer_name;
+  let customer_name = model.customer_name;
+  let ship_via = model.ship_via;
+  let freight_charge = model.freight_charge;
+  let warehouse_id = model.warehouse_id;
+  let line_items = model.line_items;
+  let project_name = model.project_name;
+  return div(
+    toList([]),
+    toList([
+      element6(
+        toList([
+          on_change(
+            (var0) => {
+              return new UserUpdatedCustomerId(var0);
+            }
+          )
+        ]),
+        toList([])
+      ),
+      view_input(
+        "date",
+        "date",
+        (var0) => {
+          return new UserUpdatedDate(var0);
+        },
+        date
+      ),
+      view_input(
+        "add",
+        "text",
+        (var0) => {
+          return new UserUpdatedAdd(var0);
+        },
+        add3
+      ),
+      view_input(
+        "remarks",
+        "text",
+        (var0) => {
+          return new UserUpdatedRemarks(var0);
+        },
+        remarks
+      ),
+      view_input(
+        "customer_remarks",
+        "text",
+        (var0) => {
+          return new UserUpdatedCustomerRemarks(var0);
+        },
+        customer_remarks
+      ),
+      view_input(
+        "sales_rep_id",
+        "text",
+        (var0) => {
+          return new UserUpdatedSalesRepId(var0);
+        },
+        sales_rep_id
+      ),
+      view_input(
+        "buyer_name",
+        "text",
+        (var0) => {
+          return new UserUpdatedBuyerName(var0);
+        },
+        buyer_name
+      ),
+      view_input(
+        "customer_name",
+        "text",
+        (var0) => {
+          return new UserUpdatedCustomerName(var0);
+        },
+        customer_name
+      ),
+      view_input(
+        "ship_via",
+        "text",
+        (var0) => {
+          return new UserUpdatedShipVia(var0);
+        },
+        ship_via
+      ),
+      view_input(
+        "freight_charge",
+        "text",
+        (var0) => {
+          return new UserUpdatedFreightCharge(var0);
+        },
+        freight_charge
+      ),
+      view_input(
+        "warehouse_id",
+        "text",
+        (var0) => {
+          return new UserUpdatedWarehouseId(var0);
+        },
+        warehouse_id
+      ),
+      view_input(
+        "project_name",
+        "text",
+        (var0) => {
+          return new UserUpdatedProjectName(var0);
+        },
+        project_name
+      ),
+      div(
+        toList([]),
+        toList([
+          div2(
+            toList([]),
+            (() => {
+              let _pipe = line_items;
+              let _pipe$1 = line_items_dict_to_list(_pipe);
+              return map2(
+                _pipe$1,
+                (line_item) => {
+                  let line_num = line_item[0];
+                  let item_id = line_item[1].item_id;
+                  let quantity = line_item[1].quantity;
+                  let unit_price = line_item[1].unit_price;
+                  let commission_rate = line_item[1].commission_rate;
+                  let discount_rate = line_item[1].discount_rate;
+                  return [
+                    to_string(line_num),
+                    div(
+                      toList([]),
+                      toList([
+                        view_input(
+                          "item_id",
+                          "text",
+                          (_capture) => {
+                            return new UserUpdatedItemId(line_num, _capture);
+                          },
+                          item_id
+                        ),
+                        view_input(
+                          "quantity",
+                          "text",
+                          (_capture) => {
+                            return new UserUpdatedQuantity(line_num, _capture);
+                          },
+                          quantity
+                        ),
+                        view_input(
+                          "unit_price",
+                          "text",
+                          (_capture) => {
+                            return new UserUpdatedUnitPrice(line_num, _capture);
+                          },
+                          unit_price
+                        ),
+                        view_input(
+                          "commission_rate",
+                          "text",
+                          (_capture) => {
+                            return new UserUpdatedCommissionRate(
+                              line_num,
+                              _capture
+                            );
+                          },
+                          commission_rate
+                        ),
+                        view_input(
+                          "discount_rate",
+                          "text",
+                          (_capture) => {
+                            return new UserUpdatedDiscountRate(
+                              line_num,
+                              _capture
+                            );
+                          },
+                          discount_rate
+                        ),
+                        button(
+                          toList([
+                            on_click(new UserRemovedLineItem(line_num))
+                          ]),
+                          toList([text3("Remove")])
+                        )
+                      ])
+                    )
+                  ];
+                }
+              );
+            })()
+          ),
+          button(
+            toList([on_click(new UserAddedLineItem())]),
+            toList([text3("Add")])
+          )
+        ])
+      ),
+      button(
+        toList([on_click(new UserClickedSave())]),
+        toList([text3("Save")])
+      )
+    ])
+  );
+}
+var event_name = "change";
+var required = "Required";
 function non_empty_string_parse(value2) {
   let $ = is_empty(value2);
   if ($) {
-    return new Error("Required");
+    let _pipe = required;
+    return new Error(_pipe);
   } else {
     let _pipe = value2;
     let _pipe$1 = new NonEmptyString(_pipe);
@@ -5930,46 +6392,6 @@ function positive_int_parse(string5) {
     }
   );
 }
-function new_line_item_form() {
-  return new LineItemForm(
-    new_field(),
-    new_field(),
-    new_field(),
-    new_field(),
-    new_field()
-  );
-}
-function update_line_item(model, update5, fun) {
-  let line_items = model.line_items;
-  let _block;
-  let _pipe = line_items;
-  _block = upsert(
-    _pipe,
-    update5,
-    (line_item) => {
-      let _pipe$1 = line_item;
-      let _pipe$2 = lazy_unwrap(_pipe$1, new_line_item_form);
-      return fun(_pipe$2);
-    }
-  );
-  let line_items$1 = _block;
-  let _record = model;
-  return new Model(
-    _record.date,
-    _record.add,
-    _record.remarks,
-    _record.customer_remarks,
-    _record.customer_id,
-    _record.sales_rep_id,
-    _record.buyer_name,
-    _record.customer_name,
-    _record.ship_via,
-    _record.freight_charge,
-    _record.warehouse_id,
-    line_items$1,
-    _record.project_name
-  );
-}
 function non_negative_float_parse(string5) {
   return try$(
     (() => {
@@ -6039,7 +6461,14 @@ function update_values(model) {
     })(),
     (() => {
       let _pipe = customer_id;
-      return update_parsed_value(_pipe, positive_int_parse);
+      return lazy_or(
+        _pipe,
+        () => {
+          let _pipe$1 = required;
+          let _pipe$2 = new Error(_pipe$1);
+          return new Some(_pipe$2);
+        }
+      );
     })(),
     (() => {
       let _pipe = sales_rep_id;
@@ -6156,7 +6585,13 @@ function model_to_form(model) {
                   return try$(
                     (() => {
                       let _pipe = customer_id;
-                      return get_parsed_value(_pipe, positive_int_parse);
+                      return lazy_unwrap(
+                        _pipe,
+                        () => {
+                          let _pipe$1 = required;
+                          return new Error(_pipe$1);
+                        }
+                      );
                     })(),
                     (customer_id2) => {
                       return try$(
@@ -6345,264 +6780,6 @@ function model_to_form(model) {
     }
   );
 }
-var component_name = "my-form";
-function view_input(name3, type_2, on_input2, field2) {
-  let value2 = field2.value;
-  let parsed_value = field2.parsed_value;
-  return div(
-    toList([]),
-    toList([
-      label(
-        toList([for$(name3)]),
-        toList([text3(name3), text3(": ")])
-      ),
-      input(
-        toList([
-          type_(type_2),
-          id(name3),
-          name(name3),
-          on_input(on_input2),
-          value(value2)
-        ])
-      ),
-      (() => {
-        let _pipe = parsed_value;
-        let _pipe$1 = map(
-          _pipe,
-          (parsed_value2) => {
-            let _pipe$12 = parsed_value2;
-            let _pipe$2 = map4(
-              _pipe$12,
-              (_) => {
-                return none2();
-              }
-            );
-            let _pipe$3 = map_error(
-              _pipe$2,
-              (msg) => {
-                return p(toList([]), toList([text3(msg)]));
-              }
-            );
-            return unwrap_both(_pipe$3);
-          }
-        );
-        return lazy_unwrap(_pipe$1, none2);
-      })()
-    ])
-  );
-}
-function view2(model) {
-  let date = model.date;
-  let add3 = model.add;
-  let remarks = model.remarks;
-  let customer_remarks = model.customer_remarks;
-  let customer_id = model.customer_id;
-  let sales_rep_id = model.sales_rep_id;
-  let buyer_name = model.buyer_name;
-  let customer_name = model.customer_name;
-  let ship_via = model.ship_via;
-  let freight_charge = model.freight_charge;
-  let warehouse_id = model.warehouse_id;
-  let line_items = model.line_items;
-  let project_name = model.project_name;
-  return div(
-    toList([]),
-    toList([
-      element3(
-        toList([route("/ws/combobox")]),
-        toList([])
-      ),
-      view_input(
-        "date",
-        "date",
-        (var0) => {
-          return new UserUpdatedDate(var0);
-        },
-        date
-      ),
-      view_input(
-        "add",
-        "text",
-        (var0) => {
-          return new UserUpdatedAdd(var0);
-        },
-        add3
-      ),
-      view_input(
-        "remarks",
-        "text",
-        (var0) => {
-          return new UserUpdatedRemarks(var0);
-        },
-        remarks
-      ),
-      view_input(
-        "customer_remarks",
-        "text",
-        (var0) => {
-          return new UserUpdatedCustomerRemarks(var0);
-        },
-        customer_remarks
-      ),
-      view_input(
-        "customer_id",
-        "text",
-        (var0) => {
-          return new UserUpdatedCustomerId(var0);
-        },
-        customer_id
-      ),
-      view_input(
-        "sales_rep_id",
-        "text",
-        (var0) => {
-          return new UserUpdatedSalesRepId(var0);
-        },
-        sales_rep_id
-      ),
-      view_input(
-        "buyer_name",
-        "text",
-        (var0) => {
-          return new UserUpdatedBuyerName(var0);
-        },
-        buyer_name
-      ),
-      view_input(
-        "customer_name",
-        "text",
-        (var0) => {
-          return new UserUpdatedCustomerName(var0);
-        },
-        customer_name
-      ),
-      view_input(
-        "ship_via",
-        "text",
-        (var0) => {
-          return new UserUpdatedShipVia(var0);
-        },
-        ship_via
-      ),
-      view_input(
-        "freight_charge",
-        "text",
-        (var0) => {
-          return new UserUpdatedFreightCharge(var0);
-        },
-        freight_charge
-      ),
-      view_input(
-        "warehouse_id",
-        "text",
-        (var0) => {
-          return new UserUpdatedWarehouseId(var0);
-        },
-        warehouse_id
-      ),
-      view_input(
-        "project_name",
-        "text",
-        (var0) => {
-          return new UserUpdatedProjectName(var0);
-        },
-        project_name
-      ),
-      div(
-        toList([]),
-        toList([
-          div2(
-            toList([]),
-            (() => {
-              let _pipe = line_items;
-              let _pipe$1 = line_items_dict_to_list(_pipe);
-              return map2(
-                _pipe$1,
-                (line_item) => {
-                  let line_num = line_item[0];
-                  let item_id = line_item[1].item_id;
-                  let quantity = line_item[1].quantity;
-                  let unit_price = line_item[1].unit_price;
-                  let commission_rate = line_item[1].commission_rate;
-                  let discount_rate = line_item[1].discount_rate;
-                  return [
-                    to_string(line_num),
-                    div(
-                      toList([]),
-                      toList([
-                        view_input(
-                          "item_id",
-                          "text",
-                          (_capture) => {
-                            return new UserUpdatedItemId(line_num, _capture);
-                          },
-                          item_id
-                        ),
-                        view_input(
-                          "quantity",
-                          "text",
-                          (_capture) => {
-                            return new UserUpdatedQuantity(line_num, _capture);
-                          },
-                          quantity
-                        ),
-                        view_input(
-                          "unit_price",
-                          "text",
-                          (_capture) => {
-                            return new UserUpdatedUnitPrice(line_num, _capture);
-                          },
-                          unit_price
-                        ),
-                        view_input(
-                          "commission_rate",
-                          "text",
-                          (_capture) => {
-                            return new UserUpdatedCommissionRate(
-                              line_num,
-                              _capture
-                            );
-                          },
-                          commission_rate
-                        ),
-                        view_input(
-                          "discount_rate",
-                          "text",
-                          (_capture) => {
-                            return new UserUpdatedDiscountRate(
-                              line_num,
-                              _capture
-                            );
-                          },
-                          discount_rate
-                        ),
-                        button(
-                          toList([
-                            on_click(new UserRemovedLineItem(line_num))
-                          ]),
-                          toList([text3("Remove")])
-                        )
-                      ])
-                    )
-                  ];
-                }
-              );
-            })()
-          ),
-          button(
-            toList([on_click(new UserAddedLineItem())]),
-            toList([text3("Add")])
-          )
-        ])
-      ),
-      button(
-        toList([on_click(new UserClickedSave())]),
-        toList([text3("Save")])
-      )
-    ])
-  );
-}
-var event_name = "change";
 function update2(model, msg) {
   if (msg instanceof UserClickedSave) {
     let _block;
@@ -6664,14 +6841,11 @@ function update2(model, msg) {
       _record.add,
       _record.remarks,
       _record.customer_remarks,
-      new Field(
-        value2,
-        (() => {
-          let _pipe2 = value2;
-          let _pipe$1 = positive_int_parse(_pipe2);
-          return new Some(_pipe$1);
-        })()
-      ),
+      (() => {
+        let _pipe2 = value2;
+        let _pipe$1 = new Ok(_pipe2);
+        return new Some(_pipe$1);
+      })(),
       _record.sales_rep_id,
       _record.buyer_name,
       _record.customer_name,
@@ -6741,7 +6915,7 @@ function update2(model, msg) {
     let _pipe = line_items;
     let _pipe$1 = keys(_pipe);
     let _pipe$2 = max(_pipe$1, compare2);
-    _block = unwrap2(_pipe$2, 0);
+    _block = unwrap(_pipe$2, 0);
     let max_line_num = _block;
     let _block$1;
     let _pipe$3 = line_items;
@@ -7223,6 +7397,22 @@ function magnifying_glass(attrs) {
 }
 
 // build/dev/javascript/client/dom.ffi.mjs
+var assigned_elements = (slot3) => {
+  if (slot3 instanceof HTMLSlotElement) {
+    return new Ok(List.fromArray(slot3.assignedElements()));
+  }
+  return new Error(null);
+};
+var get_attribute = (element7, name3) => {
+  if (!(element7 instanceof HTMLElement)) {
+    return new Error(null);
+  }
+  const attr = element7.getAttribute(name3);
+  if (attr === null) {
+    return new Error(null);
+  }
+  return new Ok(attr);
+};
 var hide_popover = (root3) => {
   if (!(root3 instanceof ShadowRoot)) return;
   const popover2 = root3.querySelector("[popover]");
@@ -7234,19 +7424,29 @@ var hide_popover = (root3) => {
 };
 
 // build/dev/javascript/client/client/ui/combobox.mjs
+var Option2 = class extends CustomType {
+  constructor(value2, label2, has_content) {
+    super();
+    this.value = value2;
+    this.label = label2;
+    this.has_content = has_content;
+  }
+};
 var Model2 = class extends CustomType {
-  constructor(value2, query, intent, values3) {
+  constructor(value2, query, intent, options2, loading) {
     super();
     this.value = value2;
     this.query = query;
     this.intent = intent;
-    this.values = values3;
+    this.options = options2;
+    this.loading = loading;
   }
 };
-var ParentChangedValues = class extends CustomType {
-  constructor(x0) {
+var ParentChangedChildren = class extends CustomType {
+  constructor(x0, x1) {
     super();
     this[0] = x0;
+    this[1] = x1;
   }
 };
 var UserChangedQuery = class extends CustomType {
@@ -7273,225 +7473,19 @@ var UserSelectedOption = class extends CustomType {
     this[0] = x0;
   }
 };
-function init3(_) {
-  return [new Model2("", "", new None(), toList([])), none()];
+function content_key(value2) {
+  return value2 + "-content";
 }
-function update3(model, msg) {
-  if (msg instanceof ParentChangedValues) {
-    let values3 = msg[0];
-    let _block;
-    let _pipe = values3;
-    let _pipe$1 = first(_pipe);
-    _block = from_result(_pipe$1);
-    let intent = _block;
-    let _block$1;
-    let _record = model;
-    _block$1 = new Model2(_record.value, _record.query, intent, values3);
-    let model$1 = _block$1;
-    let effect = none();
-    return [model$1, effect];
-  } else if (msg instanceof UserChangedQuery) {
-    let query = msg[0];
-    let effect = emit(
-      "query",
-      object2(toList([["query", string3(query)]]))
-    );
-    let _block;
-    let _record = model;
-    _block = new Model2(_record.value, query, _record.intent, _record.values);
-    let model$1 = _block;
-    return [model$1, effect];
-  } else if (msg instanceof UserPressedKey && msg[0] === "Tab") {
-    let effect = after_paint(
-      (_, root3) => {
-        return hide_popover(root3);
-      }
-    );
-    return [model, effect];
-  } else if (msg instanceof UserHoveredOption) {
-    let intent = msg[0];
-    return [
-      (() => {
-        let _record = model;
-        return new Model2(
-          _record.value,
-          _record.query,
-          new Some(intent),
-          _record.values
-        );
-      })(),
-      none()
-    ];
-  } else if (msg instanceof UserPressedKey && msg[0] === "ArrowDown") {
-    let _block;
-    let $ = model.intent;
-    if ($ instanceof Some) {
-      let intent2 = $[0];
-      let _pipe = model.values;
-      _block = fold_until(
-        _pipe,
-        new None(),
-        (acc, item) => {
-          if (acc instanceof Some) {
-            let _pipe$1 = item;
-            let _pipe$2 = new Some(_pipe$1);
-            return new Stop(_pipe$2);
-          } else {
-            let _block$12;
-            let $1 = item === intent2;
-            if ($1) {
-              let _pipe$12 = "";
-              _block$12 = new Some(_pipe$12);
-            } else {
-              _block$12 = new None();
-            }
-            let _pipe$1 = _block$12;
-            return new Continue(_pipe$1);
-          }
-        }
-      );
-    } else {
-      let _pipe = model.values;
-      let _pipe$1 = first(_pipe);
-      _block = from_result(_pipe$1);
-    }
-    let intent = _block;
-    let _block$1;
-    let _record = model;
-    _block$1 = new Model2(_record.value, _record.query, intent, _record.values);
-    let model$1 = _block$1;
-    let effect = none();
-    return [model$1, effect];
-  } else if (msg instanceof UserPressedKey && msg[0] === "End") {
-    let _block;
-    let _pipe = model.values;
-    let _pipe$1 = last(_pipe);
-    _block = from_result(_pipe$1);
-    let intent = _block;
-    let _block$1;
-    let _record = model;
-    _block$1 = new Model2(_record.value, _record.query, intent, _record.values);
-    let model$1 = _block$1;
-    let effect = none();
-    return [model$1, effect];
-  } else if (msg instanceof UserPressedKey && msg[0] === "Enter") {
-    let _block;
-    let _record = model;
-    _block = new Model2(
-      (() => {
-        let _pipe = model.intent;
-        return unwrap(_pipe, model.value);
-      })(),
-      _record.query,
-      _record.intent,
-      _record.values
-    );
-    let model$1 = _block;
-    let _block$1;
-    let $ = model$1.intent;
-    if ($ instanceof Some) {
-      let value2 = $[0];
-      _block$1 = batch(
-        toList([
-          emit(
-            "change",
-            object2(toList([["value", string3(value2)]]))
-          ),
-          after_paint((_, root3) => {
-            return hide_popover(root3);
-          })
-        ])
-      );
-    } else {
-      _block$1 = after_paint(
-        (_, root3) => {
-          return hide_popover(root3);
-        }
-      );
-    }
-    let effect = _block$1;
-    return [model$1, effect];
-  } else if (msg instanceof UserPressedKey && msg[0] === "Escape") {
-    let effect = after_paint(
-      (_, root3) => {
-        return hide_popover(root3);
-      }
-    );
-    return [model, effect];
-  } else if (msg instanceof UserPressedKey && msg[0] === "Home") {
-    let _block;
-    let _pipe = model.values;
-    let _pipe$1 = first(_pipe);
-    _block = from_result(_pipe$1);
-    let intent = _block;
-    let _block$1;
-    let _record = model;
-    _block$1 = new Model2(_record.value, _record.query, intent, _record.values);
-    let model$1 = _block$1;
-    let effect = none();
-    return [model$1, effect];
-  } else if (msg instanceof UserPressedKey && msg[0] === "ArrowUp") {
-    let _block;
-    let $ = model.intent;
-    if ($ instanceof Some) {
-      let intent2 = $[0];
-      let _pipe = model.values;
-      let _pipe$1 = reverse(_pipe);
-      _block = fold_until(
-        _pipe$1,
-        new None(),
-        (acc, item) => {
-          if (acc instanceof Some) {
-            let _pipe$2 = item;
-            let _pipe$3 = new Some(_pipe$2);
-            return new Stop(_pipe$3);
-          } else {
-            let _block$12;
-            let $1 = item === intent2;
-            if ($1) {
-              let _pipe$22 = "";
-              _block$12 = new Some(_pipe$22);
-            } else {
-              _block$12 = new None();
-            }
-            let _pipe$2 = _block$12;
-            return new Continue(_pipe$2);
-          }
-        }
-      );
-    } else {
-      let _pipe = model.values;
-      let _pipe$1 = last(_pipe);
-      _block = from_result(_pipe$1);
-    }
-    let intent = _block;
-    let _block$1;
-    let _record = model;
-    _block$1 = new Model2(_record.value, _record.query, intent, _record.values);
-    let model$1 = _block$1;
-    let effect = none();
-    return [model$1, effect];
-  } else if (msg instanceof UserPressedKey) {
-    return [model, none()];
-  } else {
-    let value2 = msg[0];
-    let _block;
-    let _record = model;
-    _block = new Model2(value2, _record.query, _record.intent, _record.values);
-    let model$1 = _block;
-    let effect = batch(
-      toList([
-        emit(
-          "change",
-          object2(toList([["value", string3(value2)]]))
-        ),
-        after_paint((_, root3) => {
-          return hide_popover(root3);
-        })
-      ])
-    );
-    return [model$1, effect];
-  }
+function init3(_) {
+  return [
+    new Model2(new None(), "", new None(), toList([]), false),
+    none()
+  ];
+}
+function hide_popover2() {
+  return after_paint((_, root3) => {
+    return hide_popover(root3);
+  });
 }
 function view_input2(query) {
   return container(
@@ -7523,8 +7517,8 @@ function view_input2(query) {
   );
 }
 function view_option(option, value2, intent, last2) {
-  let is_selected = option === value2;
-  let is_intent = isEqual(new Some(option), intent);
+  let is_selected = isEqual(new Some(option.value), value2);
+  let is_intent = isEqual(new Some(option.value), intent);
   let _block;
   if (is_selected) {
     _block = check;
@@ -7554,9 +7548,9 @@ function view_option(option, value2, intent, last2) {
   return li(
     toList([
       attribute2("part", join(parts, " ")),
-      attribute2("value", option),
-      on_mouse_over(new UserHoveredOption(option)),
-      on_mouse_down(new UserSelectedOption(option))
+      attribute2("value", option.value),
+      on_mouse_over(new UserHoveredOption(option.value)),
+      on_mouse_down(new UserSelectedOption(option.value))
     ]),
     toList([
       icon2(
@@ -7566,39 +7560,504 @@ function view_option(option, value2, intent, last2) {
       ),
       span(
         toList([style("flex", "1 1 0%")]),
-        toList([named_slot(option, toList([]), toList([]))])
+        toList([
+          named_slot(
+            content_key(option.value),
+            toList([]),
+            toList([])
+          )
+        ])
       )
     ])
   );
 }
-function do_view_options(options, value2, intent) {
-  if (options.hasLength(0)) {
+function do_view_options(options2, value2, intent) {
+  if (options2.hasLength(0)) {
     return toList([]);
-  } else if (options.hasLength(1)) {
-    let option = options.head;
-    return toList([[option, view_option(option, value2, intent, true)]]);
+  } else if (options2.hasLength(1)) {
+    let option$1 = options2.head;
+    return toList([[option$1.value, view_option(option$1, value2, intent, true)]]);
   } else {
-    let option = options.head;
-    let rest = options.tail;
+    let option$1 = options2.head;
+    let rest = options2.tail;
     return prepend(
-      [option, view_option(option, value2, intent, false)],
+      [option$1.value, view_option(option$1, value2, intent, false)],
       do_view_options(rest, value2, intent)
     );
   }
 }
-function view_options(options, value2, intent) {
-  return ul2(toList([]), do_view_options(options, value2, intent));
+function view_options(options2, value2, intent) {
+  return ul2(toList([]), do_view_options(options2, value2, intent));
 }
 var name2 = "lustre-ui-combobox";
+var option_name = name2 + "-option";
+var has_content_attribute = "has_content";
+function options(children) {
+  return run(
+    children,
+    list2(
+      then$(
+        dynamic,
+        (child) => {
+          return field(
+            "tagName",
+            string2,
+            (tag_name) => {
+              return field(
+                "textContent",
+                string2,
+                (text_content) => {
+                  return then$(
+                    (() => {
+                      let $ = get_attribute(child, "value");
+                      if ($.isOk()) {
+                        let value2 = $[0];
+                        let _pipe = value2;
+                        return success(_pipe);
+                      } else {
+                        let _pipe = "";
+                        return failure(_pipe, "String");
+                      }
+                    })(),
+                    (value2) => {
+                      let _block;
+                      let $ = get_attribute(child, "selected");
+                      if ($.isOk()) {
+                        _block = true;
+                      } else {
+                        _block = false;
+                      }
+                      let selected2 = _block;
+                      let _block$1;
+                      let $1 = get_attribute(child, has_content_attribute);
+                      if ($1.isOk()) {
+                        _block$1 = true;
+                      } else {
+                        _block$1 = false;
+                      }
+                      let has_content = _block$1;
+                      return success(
+                        [
+                          (() => {
+                            let _pipe = tag_name;
+                            return lowercase(_pipe);
+                          })(),
+                          value2,
+                          text_content,
+                          has_content,
+                          selected2
+                        ]
+                      );
+                    }
+                  );
+                }
+              );
+            }
+          );
+        }
+      )
+    )
+  );
+}
+function handle_slot_change() {
+  return field(
+    "target",
+    dynamic,
+    (slot3) => {
+      return then$(
+        (() => {
+          let $ = assigned_elements(slot3);
+          if ($.isOk()) {
+            let children = $[0];
+            let _pipe = children;
+            return success(_pipe);
+          } else {
+            let _pipe = nil();
+            return failure(_pipe, "Dynamic");
+          }
+        })(),
+        (children) => {
+          return then$(
+            (() => {
+              let $ = options(children);
+              if ($.isOk()) {
+                let options$1 = $[0];
+                let _pipe = options$1;
+                return success(_pipe);
+              } else {
+                let _pipe = toList([]);
+                return failure(
+                  _pipe,
+                  "List(#(String, String, String, Bool))"
+                );
+              }
+            })(),
+            (options2) => {
+              let _pipe = options2;
+              let _pipe$1 = fold_right(
+                _pipe,
+                [toList([]), new None(), new$()],
+                (acc, option) => {
+                  let tag = option[0];
+                  let value2 = option[1];
+                  let label2 = option[2];
+                  let has_content = option[3];
+                  let selected2 = option[4];
+                  return guard(
+                    tag !== option_name,
+                    acc,
+                    () => {
+                      return guard(
+                        contains(acc[2], value2),
+                        acc,
+                        () => {
+                          let seen = insert2(acc[2], value2);
+                          let options$1 = prepend(
+                            new Option2(value2, label2, has_content),
+                            acc[0]
+                          );
+                          let _block;
+                          let $ = acc[1];
+                          if (selected2 && $ instanceof None) {
+                            _block = new Some(value2);
+                          } else {
+                            _block = acc[1];
+                          }
+                          let selection = _block;
+                          return [options$1, selection, seen];
+                        }
+                      );
+                    }
+                  );
+                }
+              );
+              let _pipe$2 = ((tuple) => {
+                let options$1 = tuple[0];
+                let selection = tuple[1];
+                return new ParentChangedChildren(options$1, selection);
+              })(_pipe$1);
+              return success(_pipe$2);
+            }
+          );
+        }
+      );
+    }
+  );
+}
+var query_key = "query";
+var query_event_name = "query";
+function emit_query(query) {
+  return emit(
+    query_event_name,
+    object2(toList([[query_key, string3(query)]]))
+  );
+}
+var value_key2 = "value";
+var change_event_name = "change";
+function emit_change(value2) {
+  return emit(
+    change_event_name,
+    object2(toList([[value_key2, string3(value2)]]))
+  );
+}
+function update3(model, msg) {
+  if (msg instanceof ParentChangedChildren) {
+    let options$1 = msg[0];
+    let selection = msg[1];
+    let _block;
+    let _pipe = options$1;
+    let _pipe$1 = find2(_pipe, (option) => {
+      return option.has_content;
+    });
+    let _pipe$2 = from_result(_pipe$1);
+    _block = map(_pipe$2, (option) => {
+      return option.value;
+    });
+    let intent = _block;
+    let _block$1;
+    let _record = model;
+    _block$1 = new Model2(selection, _record.query, intent, options$1, false);
+    let model$1 = _block$1;
+    let effect = none();
+    return [model$1, effect];
+  } else if (msg instanceof UserChangedQuery) {
+    let query = msg[0];
+    let _block;
+    let _pipe = query;
+    _block = emit_query(_pipe);
+    let effect = _block;
+    let _block$1;
+    let _record = model;
+    _block$1 = new Model2(
+      _record.value,
+      query,
+      _record.intent,
+      _record.options,
+      true
+    );
+    let model$1 = _block$1;
+    return [model$1, effect];
+  } else if (msg instanceof UserPressedKey && msg[0] === "Tab") {
+    let effect = hide_popover2();
+    return [model, effect];
+  } else if (msg instanceof UserHoveredOption) {
+    let intent = msg[0];
+    return [
+      (() => {
+        let _record = model;
+        return new Model2(
+          _record.value,
+          _record.query,
+          new Some(intent),
+          _record.options,
+          _record.loading
+        );
+      })(),
+      none()
+    ];
+  } else if (msg instanceof UserPressedKey && msg[0] === "ArrowDown") {
+    let _block;
+    let $ = model.intent;
+    if ($ instanceof Some) {
+      let intent2 = $[0];
+      let _pipe = model.options;
+      _block = fold_until(
+        _pipe,
+        new None(),
+        (acc, option) => {
+          if (acc instanceof Some) {
+            let _pipe$1 = option.value;
+            let _pipe$2 = new Some(_pipe$1);
+            return new Stop(_pipe$2);
+          } else {
+            let _block$12;
+            let $1 = option.value === intent2;
+            if ($1) {
+              let _pipe$12 = "";
+              _block$12 = new Some(_pipe$12);
+            } else {
+              _block$12 = new None();
+            }
+            let _pipe$1 = _block$12;
+            return new Continue(_pipe$1);
+          }
+        }
+      );
+    } else {
+      let _pipe = model.options;
+      let _pipe$1 = first(_pipe);
+      let _pipe$2 = from_result(_pipe$1);
+      _block = map(_pipe$2, (option) => {
+        return option.value;
+      });
+    }
+    let intent = _block;
+    let _block$1;
+    let _record = model;
+    _block$1 = new Model2(
+      _record.value,
+      _record.query,
+      intent,
+      _record.options,
+      _record.loading
+    );
+    let model$1 = _block$1;
+    let effect = none();
+    return [model$1, effect];
+  } else if (msg instanceof UserPressedKey && msg[0] === "End") {
+    let _block;
+    let _pipe = model.options;
+    let _pipe$1 = last(_pipe);
+    let _pipe$2 = from_result(_pipe$1);
+    _block = map(_pipe$2, (option) => {
+      return option.value;
+    });
+    let intent = _block;
+    let _block$1;
+    let _record = model;
+    _block$1 = new Model2(
+      _record.value,
+      _record.query,
+      intent,
+      _record.options,
+      _record.loading
+    );
+    let model$1 = _block$1;
+    let effect = none();
+    return [model$1, effect];
+  } else if (msg instanceof UserPressedKey && msg[0] === "Enter") {
+    let _block;
+    let _record = model;
+    _block = new Model2(
+      (() => {
+        let _pipe = model.intent;
+        return or(_pipe, model.value);
+      })(),
+      _record.query,
+      _record.intent,
+      _record.options,
+      _record.loading
+    );
+    let model$1 = _block;
+    let _block$1;
+    let $ = model$1.intent;
+    if ($ instanceof Some) {
+      let value2 = $[0];
+      _block$1 = batch(
+        toList([
+          (() => {
+            let _pipe = value2;
+            return emit_change(_pipe);
+          })(),
+          hide_popover2()
+        ])
+      );
+    } else {
+      _block$1 = hide_popover2();
+    }
+    let effect = _block$1;
+    return [model$1, effect];
+  } else if (msg instanceof UserPressedKey && msg[0] === "Escape") {
+    let effect = hide_popover2();
+    return [model, effect];
+  } else if (msg instanceof UserPressedKey && msg[0] === "Home") {
+    let _block;
+    let _pipe = model.options;
+    let _pipe$1 = first(_pipe);
+    let _pipe$2 = from_result(_pipe$1);
+    _block = map(_pipe$2, (option) => {
+      return option.value;
+    });
+    let intent = _block;
+    let _block$1;
+    let _record = model;
+    _block$1 = new Model2(
+      _record.value,
+      _record.query,
+      intent,
+      _record.options,
+      _record.loading
+    );
+    let model$1 = _block$1;
+    let effect = none();
+    return [model$1, effect];
+  } else if (msg instanceof UserPressedKey && msg[0] === "ArrowUp") {
+    let _block;
+    let $ = model.intent;
+    if ($ instanceof Some) {
+      let intent2 = $[0];
+      let _pipe = model.options;
+      let _pipe$1 = reverse(_pipe);
+      _block = fold_until(
+        _pipe$1,
+        new None(),
+        (acc, option) => {
+          if (acc instanceof Some) {
+            let _pipe$2 = option.value;
+            let _pipe$3 = new Some(_pipe$2);
+            return new Stop(_pipe$3);
+          } else {
+            let _block$12;
+            let $1 = option.value === intent2;
+            if ($1) {
+              let _pipe$22 = "";
+              _block$12 = new Some(_pipe$22);
+            } else {
+              _block$12 = new None();
+            }
+            let _pipe$2 = _block$12;
+            return new Continue(_pipe$2);
+          }
+        }
+      );
+    } else {
+      let _pipe = model.options;
+      let _pipe$1 = last(_pipe);
+      let _pipe$2 = from_result(_pipe$1);
+      _block = map(_pipe$2, (option) => {
+        return option.value;
+      });
+    }
+    let intent = _block;
+    let _block$1;
+    let _record = model;
+    _block$1 = new Model2(
+      _record.value,
+      _record.query,
+      intent,
+      _record.options,
+      _record.loading
+    );
+    let model$1 = _block$1;
+    let effect = none();
+    return [model$1, effect];
+  } else if (msg instanceof UserPressedKey) {
+    return [model, none()];
+  } else {
+    let value2 = msg[0];
+    let _block;
+    let _record = model;
+    _block = new Model2(
+      (() => {
+        let _pipe = value2;
+        return new Some(_pipe);
+      })(),
+      _record.query,
+      _record.intent,
+      _record.options,
+      _record.loading
+    );
+    let model$1 = _block;
+    let effect = batch(
+      toList([
+        (() => {
+          let _pipe = value2;
+          return emit_change(_pipe);
+        })(),
+        hide_popover2()
+      ])
+    );
+    return [model$1, effect];
+  }
+}
+var popovertarget2 = "mypopover";
 function view3(model) {
+  let _block$1;
+  let $ = model.value;
+  if ($ instanceof Some) {
+    let value2 = $[0];
+    let _pipe2 = model.options;
+    let _pipe$1 = find2(
+      _pipe2,
+      (option) => {
+        return option.value === value2;
+      }
+    );
+    _block$1 = map4(_pipe$1, (option) => {
+      return option.label;
+    });
+  } else {
+    _block$1 = new Error(void 0);
+  }
+  let _block;
+  let _pipe = _block$1;
+  _block = unwrap(_pipe, "");
+  let label2 = _block;
   return fragment2(
     toList([
+      default_slot(
+        toList([
+          hidden(true),
+          on("slotchange", handle_slot_change())
+        ]),
+        toList([])
+      ),
       button(
-        toList([popovertarget("mypopover")]),
+        toList([popovertarget(popovertarget2)]),
         toList([
           span(
             toList([attribute2("part", "combobox-trigger-label")]),
-            toList([named_slot(model.value, toList([]), toList([]))])
+            toList([text3(label2)])
           ),
           chevron_down(
             toList([attribute2("part", "combobox-trigger-icon")])
@@ -7606,37 +8065,35 @@ function view3(model) {
         ])
       ),
       div(
-        toList([id("mypopover"), popover("")]),
+        toList([id(popovertarget2), popover("")]),
         toList([
           view_input2(model.query),
-          view_options(model.values, model.value, model.intent)
+          view_options(
+            (() => {
+              let _pipe$1 = model.options;
+              return filter(
+                _pipe$1,
+                (option) => {
+                  return option.has_content;
+                }
+              );
+            })(),
+            model.value,
+            model.intent
+          )
         ])
       )
     ])
   );
 }
 function register2() {
-  let app = component(
+  let _pipe = component(
     init3,
     update3,
     view3,
-    toList([
-      open_shadow_root(true),
-      on_property_change(
-        "values",
-        (() => {
-          let _pipe = list2(string2);
-          return map3(
-            _pipe,
-            (var0) => {
-              return new ParentChangedValues(var0);
-            }
-          );
-        })()
-      )
-    ])
+    toList([open_shadow_root(true)])
   );
-  return make_component(app, name2);
+  return make_component(_pipe, name2);
 }
 
 // build/dev/javascript/client/client.mjs
@@ -7826,10 +8283,7 @@ function view_index() {
         link(new Posts(), "read my ramblings ->")
       ])
     ),
-    element3(
-      toList([route("/ws/counter")]),
-      toList([])
-    ),
+    element4(toList([]), toList([])),
     paragraph("If you like <3")
   ]);
 }

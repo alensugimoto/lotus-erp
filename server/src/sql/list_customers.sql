@@ -1,5 +1,6 @@
 select
     id,
+    code,
     name
 from
     customers
