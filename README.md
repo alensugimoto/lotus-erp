@@ -6,6 +6,7 @@
 ```sh
 gleam add app@1
 ```
+
 ```gleam
 import app
 
@@ -18,7 +19,22 @@ Further documentation can be found at <https://hexdocs.pm/app>.
 
 ## Development
 
+To run the project, run the following commands in separate terminal windows:
+
 ```sh
-gleam run   # Run the project
-gleam test  # Run the tests
+pg_ctl start
+. sq.sh
+. ws.sh
+```
+
+To run the tests, run the following command:
+
+```sh
+gleam test
+```
+
+To run the migrations, run the following command:
+
+```sh
+. migrate.sh
 ```
