@@ -12,6 +12,7 @@ import gleam/function
 import gleam/http.{Get}
 import gleam/http/request.{type Request}
 import gleam/http/response.{type Response, Response}
+import gleam/int
 import gleam/json
 import gleam/list
 import gleam/option.{None, Some}
@@ -30,11 +31,17 @@ import mist.{type Connection as HttpConnection, type ResponseData, Websocket}
 import pog.{type Connection as DbConnectionPool}
 
 fn start_database_pool() -> pog.Connection {
-  // TODO: maybe don't parse url but split it beforehand
-  let assert Ok(url) = envoy.get("DATABASE_URL")
-  let assert Ok(config) = pog.url_config(url)
+  let assert Ok(user) = envoy.get("PGUSER")
+  let assert Ok(database) = envoy.get("PGDATABASE")
+  let assert Ok(host) = envoy.get("PGHOST")
+  let assert Ok(port) = envoy.get("PGPORT")
+  let assert Ok(port) = int.parse(port)
 
-  config
+  pog.default_config()
+  |> pog.host(host)
+  |> pog.port(port)
+  |> pog.user(user)
+  |> pog.database(database)
   |> pog.pool_size(15)
   |> pog.connect()
 }

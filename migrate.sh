@@ -20,3 +20,4 @@ psql -f ./db/migrations/0015*
 psql -f ./db/migrations/0016*
 psql -f ./db/migrations/0017*
 psql -f ./db/migrations/0025*
+set +e
