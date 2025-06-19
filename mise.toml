@@ -1,7 +1,7 @@
 [tools]
-erlang = "27.3"
+erlang = "28"
 gleam = "1.11"
-rebar = "3.24"
+rebar = "3.25"
 watchexec = "2.3"
 postgres = "17"
 
