@@ -36,5 +36,5 @@ gleam test
 To run the migrations, run the following command:
 
 ```sh
-. migrate.sh
+./migrate.sh
 ```
