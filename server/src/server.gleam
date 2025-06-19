@@ -3,6 +3,7 @@ import client/counter_ano
 import client/customer_combobox
 import components/combobox
 import components/counter
+import dev_client
 import envoy
 import gleam/bytes_tree
 import gleam/dict
@@ -17,7 +18,6 @@ import gleam/json
 import gleam/list
 import gleam/option.{None, Some}
 import gleam/otp/actor
-import gleam/pair
 import gleam/result
 import gleam/string
 import gleam/uri.{type Uri}
@@ -29,6 +29,8 @@ import lustre/element/html
 import lustre/server_component
 import mist.{type Connection as HttpConnection, type ResponseData, Websocket}
 import pog.{type Connection as DbConnectionPool}
+
+// CONTEXT ------------------------------------------------------------------------
 
 fn start_database_pool() -> pog.Connection {
   let assert Ok(user) = envoy.get("PGUSER")
@@ -43,7 +45,7 @@ fn start_database_pool() -> pog.Connection {
   |> pog.user(user)
   |> pog.database(database)
   |> pog.pool_size(15)
-  |> pog.connect()
+  |> pog.connect
 }
 
 type Context {
@@ -51,7 +53,7 @@ type Context {
 }
 
 type Resource {
-  Dev
+  DevWebSocketEndpoint
   Asset(priv: String, src: String, doc_type: DocumentType)
   CounterComponent
   Combobox
@@ -73,7 +75,7 @@ fn get_resources() -> dict.Dict(List(String), Resource) {
   let assets =
     [
       // NOTE: dev mode
-      #("autoreload", "server", JavaScriptModule),
+      #("dev_client", "dev_client", JavaScriptModule),
       #("client", "client", JavaScriptModule),
       #("client", "client", CascadingStyleSheets),
       #("lustre-server-component.min", "lustre", JavaScriptModule),
@@ -86,13 +88,18 @@ fn get_resources() -> dict.Dict(List(String), Resource) {
       #(path_segs, Asset(priv:, src:, doc_type:))
     })
 
-  let websockets = [
-    #(["ws"], Dev),
+  // NOTE: dev mode
+  let dev_ws_endpoint = [#(dev_client.path_segments, DevWebSocketEndpoint)]
+
+  let components = [
     #(counter_ano.path_segments, CounterComponent),
     #(customer_combobox.path_segments, Combobox),
   ]
 
-  let resources = list.append(assets, websockets)
+  let resources =
+    assets
+    |> list.append(dev_ws_endpoint)
+    |> list.append(components)
   let dict_resources = dict.from_list(resources)
 
   let assert True =
@@ -104,11 +111,7 @@ fn get_resources() -> dict.Dict(List(String), Resource) {
 pub fn main() {
   logging.configure()
 
-  let ctx = {
-    let db = start_database_pool()
-    let resources = get_resources()
-    Context(db:, resources:)
-  }
+  let ctx = Context(db: start_database_pool(), resources: get_resources())
 
   let assert Ok(_) =
     handle_request(_, ctx)
@@ -141,7 +144,7 @@ fn handle_get_request(
   |> result.then(fn(resource) {
     case resource {
       Asset(priv:, src:, doc_type:) -> serve_static_file(priv:, src:, doc_type:)
-      Dev ->
+      DevWebSocketEndpoint ->
         // NOTE: dev mode
         start_websocket(
           req:,

@@ -1,6 +1,6 @@
-const initialDelay = 500;
-const longDelay = 5000;
-const fastRetryDuration = 5000;
+const INITIAL_DELAY = 500;
+const LONG_DELAY = 5000;
+const FAST_RETRY_DURATION = 5000;
 const SERVER_DOWN_TIME_KEY = "lastServerDowntimeMs";
 
 let liveReloadWebSocket = null;
@@ -9,13 +9,13 @@ let disconnectTime = null;
 
 // TODO: maybe put this on a separate dev server
 // and notify it on main-server restarts
-function connect() {
+export const connect = (ws_endpoint) => {
   clearTimeout(reconnectTimeout);
 
   const protocol = window.location.protocol === "https:" ? "wss" : "ws";
   liveReloadWebSocket = new WebSocket(
     // TODO: get routes from server
-    `${protocol}://${window.location.host}/ws`,
+    `${protocol}://${window.location.host}${ws_endpoint}`,
   );
 
   liveReloadWebSocket.onopen = () => {
@@ -32,11 +32,11 @@ function connect() {
       disconnectTime = Date.now();
     }
     const downtime = Date.now() - disconnectTime;
-    const nextDelay = downtime < fastRetryDuration ? initialDelay : longDelay;
+    const nextDelay = downtime < FAST_RETRY_DURATION ? INITIAL_DELAY : LONG_DELAY;
 
     console.log(`WebSocket connection closed. Retrying in ${nextDelay / 1000}s...`);
-    reconnectTimeout = setTimeout(connect, nextDelay);
+    reconnectTimeout = setTimeout(() => {
+      connect(ws_endpoint)
+    }, nextDelay);
   };
-}
-
-connect();
+};
