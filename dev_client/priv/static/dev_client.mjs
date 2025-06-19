@@ -169,7 +169,7 @@ var connect = (ws_endpoint) => {
 };
 
 // build/dev/javascript/dev_client/dev_client.mjs
-var path_segments = /* @__PURE__ */ toList(["ws"]);
+var path_segments = /* @__PURE__ */ toList(["dev"]);
 function main() {
   let _pipe = path_segments;
   let _pipe$1 = prepend2(_pipe, "");

@@ -1,7 +1,7 @@
 import gleam/list
 import gleam/string
 
-pub const path_segments = ["ws"]
+pub const path_segments = ["dev"]
 
 pub fn main() -> Nil {
   path_segments
