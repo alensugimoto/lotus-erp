@@ -23,8 +23,8 @@ To run the project, run the following commands in separate terminal windows:
 
 ```sh
 pg_ctl start
-. sq.sh
-. ws.sh
+. watch_squirrel.sh
+. watch_build_run.sh
 ```
 
 To run the tests, run the following command:
